@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Playwright output
+test-results/
+playwright-report/
+
+# SUNTEK QC reports (generated at runtime)
+reports/html/
+reports/results.json
+reports/*.json
+
+# Visual regression baselines update diffs
+**/*-actual.png
+**/*-diff.png
+
+# Environment secrets — NEVER commit
+.env
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.log

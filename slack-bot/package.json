@@ -1,0 +1,14 @@
+{
+  "name": "suntek-qc-slack-bot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Slack /qc slash command receiver that triggers SUNTEK AI QC regression runs via the GitHub Actions API",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secrets": "echo Run: wrangler secret put SLACK_SIGNING_SECRET   &&   wrangler secret put GITHUB_TOKEN"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

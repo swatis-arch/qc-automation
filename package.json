@@ -1,0 +1,35 @@
+{
+  "name": "suntek-ai-qc",
+  "version": "1.0.0",
+  "description": "SUNTEK AI QC — Multi-merchant Shopify regression suite powered by Playwright and Claude",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test":                    "playwright test",
+    "test:smoke":              "playwright test --grep \"@smoke\" --project=desktop-chromium",
+    "test:regression":         "playwright test",
+    "test:desktop":            "playwright test --project=desktop-chromium",
+    "test:mobile":             "playwright test --project=mobile-chrome",
+    "test:headed":             "playwright test --headed --project=desktop-chromium",
+    "test:ui":                 "playwright test --ui",
+    "test:debug":              "playwright test --debug",
+    "test:report":             "playwright show-report reports/html",
+    "test:visual":             "playwright test tests/visual.spec.js --project=desktop-chromium",
+    "test:visual:update":      "playwright test tests/visual.spec.js --update-snapshots --project=desktop-chromium",
+    "test:technical":          "playwright test tests/technical.spec.js --project=desktop-chromium",
+    "test:codegen":            "playwright codegen https://theoutset.com",
+    "analyze:failures":        "node ai/analyze-failure.js",
+    "generate:report":         "node ai/generate-report.js",
+    "notify:slack":            "node notifications/slack.js"
+  },
+  "keywords": ["playwright", "automation", "qa", "shopify", "regression", "suntek", "claude"],
+  "author": "Suntek AI",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
