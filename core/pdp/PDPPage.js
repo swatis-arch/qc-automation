@@ -4,17 +4,26 @@
  * Encapsulates all interactions on a Shopify product page:
  * title, images, price, variants, quantity, add to cart.
  *
- * Merchant-agnostic — receives the product handle from the fixture.
- * No hardcoded merchant config imported here.
+ * Merchant config (optional) is injected via the constructor. When provided,
+ * merchant.locators (a LocatorManager) is tried first; the broad cross-theme
+ * fallback chains below still apply on top so this keeps working for
+ * merchants without a dedicated locator configured.
  */
+
+const LocatorManager   = require('../../locators/LocatorManager');
+const AddToCartElement = require('../../elements/AddToCartElement');
 
 class PDPPage {
 
     /**
      * @param {import('@playwright/test').Page} page
+     * @param {object} [merchant] - Optional merchant config from merchants/<slug>/config.js
      */
-    constructor(page) {
-        this.page = page;
+    constructor(page, merchant = null) {
+        this.page     = page;
+        this.merchant = merchant;
+        this.locators = merchant ? merchant.locators : new LocatorManager('none', {});
+        this.addToCartEl = new AddToCartElement(page);
     }
 
     // -- Navigation -------------------------------------------------------------
@@ -42,24 +51,25 @@ class PDPPage {
 
     /** Product title / h1 */
     get productTitle() {
-        // Selector order: most-specific first, generic h1 as final fallback.
-        // The Outset: <h1 data-tmpl="product" class="h1-small product-form__title">
+        // merchant's productTitle locator first, then a broad cross-theme fallback.
         return this.page.locator(
-            'h1[data-tmpl="product"], h1.product-form__title, h1.product__title, h1.product-title, h1'
+            this.locators.resolve('productTitle', 'h1[data-tmpl="product"], h1.product-form__title, h1.product__title, h1.product-title, h1')
         ).first();
     }
 
     /** Product price */
     get productPrice() {
         return this.page.locator(
-            '.product__price .price__regular, .product__price, [class*="product__price"]'
+            this.locators.resolve('productPrice', '.product__price .price__regular, .product__price, [class*="product__price"]')
         ).first();
     }
 
     /** Primary product image */
     get productImage() {
         return this.page.locator(
-            '.product__media img, .product__image img, .product-media img, img[src*="cdn.shopify.com"]'
+            // Shopify CDN images are served from either cdn.shopify.com or the
+            // store's own domain under /cdn/shop/ — match both.
+            this.locators.resolve('productImage', '.product__media img, .product__image img, .product-media img, img[src*="cdn.shopify.com"], img[src*="/cdn/shop/"]')
         ).first();
     }
 
@@ -82,11 +92,22 @@ class PDPPage {
         return this.page.locator('input[name="quantity"], input.quantity__input, .quantity-input').first();
     }
 
-    /** Add to Cart button — covers common Shopify theme patterns */
+    /**
+     * Add to Cart button — the merchant's addToCartBtn locator if defined,
+     * otherwise a common Shopify theme fallback chain.
+     *
+     * Uses preferred(), not resolve(): a merchant's verified selector can
+     * deliberately exclude a decoy element (e.g. Outset renders a second,
+     * identically-classed "Add to Cart" button inside its sticky
+     * `nav.product-form-bar` that isn't reliably clickable at scroll
+     * position) — OR-ing in the generic fallback would reintroduce exactly
+     * that ambiguity.
+     */
     get addToCartButton() {
         return this.page.locator(
-            'button.product-form__btn, button[aria-label="Add to cart"], button[name="add"], ' +
-            '.product-form__submit, button:has-text("Add to cart"), button:has-text("Add to bag")'
+            this.locators.preferred('addToCartBtn',
+                'button.product-form__btn, button[aria-label="Add to cart"], button[name="add"], ' +
+                '.product-form__submit, button:has-text("Add to cart"), button:has-text("Add to bag")')
         ).first();
     }
 
@@ -150,14 +171,7 @@ class PDPPage {
      * @returns {Promise<import('@playwright/test').Response>}
      */
     async addToCart() {
-        const [response] = await Promise.all([
-            this.page.waitForResponse(
-                r => r.url().includes('/cart/add.js') && r.request().method() === 'POST',
-                { timeout: 15_000 }
-            ),
-            this.addToCartButton.click(),
-        ]);
-        return response;
+        return this.addToCartEl.click(this.addToCartButton);
     }
 
     /**

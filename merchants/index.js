@@ -6,8 +6,9 @@
  * -- How to add a new merchant ------------------------------------------------
  *  1. Copy merchants/abc/ to merchants/<your-slug>/
  *  2. Edit merchants/<your-slug>/config.js with the site's real values.
- *  3. Add '<your-slug>' to ACTIVE_MERCHANTS below.
- *  4. Run: npx playwright test --list
+ *  3. Edit merchants/<your-slug>/locators.js with the site's real selectors.
+ *  4. Add '<your-slug>' to ACTIVE_MERCHANTS below.
+ *  5. Run: npx playwright test --list
  *     -> You should see new projects: <your-slug>-desktop-chromium, etc.
  *
  * -- Filtering to a single merchant -------------------------------------------
@@ -18,23 +19,26 @@
 
 'use strict';
 
+const LocatorManager = require('../locators/LocatorManager');
+
 // -- Active Merchants ---------------------------------------------------------
 //  Add / remove slugs here. Each slug must match a folder under merchants/.
 const ACTIVE_MERCHANTS = [
     'outset',
-    // 'revitin',   <- fill in merchants/revitin/config.js first
-    // 'koh',       <- fill in merchants/koh/config.js first
-    // 'abc',       <- rename and fill in merchants/abc/config.js first
+    'revitin',
+    'koh',
+    'abc',
 ];
 
 // -- Load & validate configs --------------------------------------------------
 
 /**
  * Load a merchant config by slug.
- * Throws a descriptive error if the config is missing or malformed.
+ * Throws a descriptive error if the config or its locators are missing or
+ * malformed.
  *
  * @param {string} slug
- * @returns {object} merchant config
+ * @returns {object} merchant config, with `.locators` set to a LocatorManager
  */
 function loadConfig(slug) {
     let config;
@@ -49,7 +53,7 @@ function loadConfig(slug) {
     }
 
     // Minimal validation — catch common setup mistakes early
-    const required = ['name', 'slug', 'urls', 'pages', 'products', 'features', 'selectors'];
+    const required = ['name', 'slug', 'urls', 'pages', 'products', 'features'];
     for (const field of required) {
         if (!(field in config)) {
             throw new Error(
@@ -64,6 +68,19 @@ function loadConfig(slug) {
             `config.slug is "${config.slug}" but folder name is "${slug}".`
         );
     }
+
+    let rawLocators;
+    try {
+        rawLocators = require(`./${slug}/locators`);
+    } catch (err) {
+        throw new Error(
+            `[merchants/index.js] Cannot load locators for merchant "${slug}".\n` +
+            `  Expected file: merchants/${slug}/locators.js\n` +
+            `  Original error: ${err.message}`
+        );
+    }
+
+    config.locators = new LocatorManager(slug, rawLocators);
 
     return config;
 }

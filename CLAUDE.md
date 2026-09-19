@@ -82,9 +82,19 @@ Every identified failure must eventually be classified as one of:
 
 ## Merchant Onboarding Checklist
 - [ ] Create `merchants/<client-slug>/config.js`
+- [ ] Create `merchants/<client-slug>/locators.js` with the site's verified selectors
 - [ ] Verify staging URL is accessible
 - [ ] Confirm representative product URL
 - [ ] Confirm representative collection URL
 - [ ] Set feature flags correctly
 - [ ] Add integration providers
 - [ ] Document any custom test requirements
+
+---
+
+## Architecture: Locators & Business Elements
+
+- **Locators** (`merchants/<slug>/locators.js`) hold only raw selector strings for one merchant. Never put logic here.
+- **LocatorManager** (`locators/LocatorManager.js`) is the only thing that reads a locators file. Page objects and business elements call `merchant.locators.get('key')` (throws if missing) or `merchant.locators.resolve('key', fallbackChain)` (merchant selector + generic fallback) — never `require()` a locators file directly.
+- **Business elements** (`elements/`) wrap a locator + interaction that's shared by more than one page object (e.g. `MobileMenuElement`, `ProductCardElement`, `CartBadgeElement`, `AddToCartElement`). If a locator/interaction is only ever used from one page object, it stays inline in that page object — don't create an element for it just for the sake of the pattern.
+- **Page objects** (`core/*/*.js`) compose locators and business elements into the page's public API (the methods/getters specs call). Specs never touch `merchant.locators` or `elements/` directly except in the few cases already established in `tests/*.spec.js` (e.g. asserting a raw locator's visibility).

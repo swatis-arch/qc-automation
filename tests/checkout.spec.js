@@ -61,15 +61,15 @@ test.describe('SUNTEK QC — Checkout [CHECK001]', () => {
         expect(formExists).toBe(true);
     });
 
-    test('CHECK001 — Checkout page does not display a critical JS error', async ({ page }) => {
+    test('CHECK001 — Checkout page does not display a critical JS error', async ({ page, merchant }) => {
         const jsErrors = [];
         page.on('pageerror', error => jsErrors.push(error.message));
 
         // We need to reproduce the add-to-cart flow inline here for isolation
         await page.route('**/*klaviyo*', route => route.abort());
-        await page.goto('/products/firming-vegan-collagen-prep-serum', { waitUntil: 'domcontentloaded' });
+        await page.goto(merchant.products.default.path, { waitUntil: 'domcontentloaded' });
 
-        const addToCartBtn = page.locator('button[name="add"], .product-form__submit').first();
+        const addToCartBtn = page.locator(merchant.locators.resolve('addToCartBtn', 'button[name="add"], .product-form__submit')).first();
         await addToCartBtn.waitFor({ state: 'visible', timeout: 15_000 });
 
         const inStock = !(await addToCartBtn.isDisabled().catch(() => true));

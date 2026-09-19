@@ -70,7 +70,7 @@ test.describe('SUNTEK QC — Visual Regression', () => {
     // ── Component-level screenshots ────────────────────────────────────────────
 
     test('Visual — Navbar component matches baseline', async ({ homepage, page }) => {
-        const header = page.locator('header.header, nav.nav').first();
+        const header = homepage.header;
         await header.waitFor({ state: 'visible', timeout: 10_000 });
 
         await expect(header).toHaveScreenshot('component-navbar.png', {

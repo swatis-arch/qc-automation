@@ -17,11 +17,11 @@ test.describe('SUNTEK QC — Technical Quality', () => {
 
     // ── Broken images ──────────────────────────────────────────────────────────
 
-    test('@smoke Technical — Homepage has no broken images (4xx)', async ({ page }) => {
+    test('@smoke Technical — Homepage has no broken images (4xx)', async ({ page, merchant }) => {
         await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-        // Wait for images to be rendered
-        await page.locator('.product-card img, .hero img, img.logo__image').first()
+        // Wait for the page's main content (and its images) to render
+        await page.locator(`${merchant.locators.get('productCard')}, ${merchant.locators.get('hero')}`).first()
             .waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {});
 
         // Collect all image src attributes from the DOM
@@ -54,7 +54,7 @@ test.describe('SUNTEK QC — Technical Quality', () => {
         expect(brokenImages).toHaveLength(0);
     });
 
-    test('Technical — PDP has no broken images', async ({ page }) => {
+    test('Technical — PDP has no broken images', async ({ page, merchant }) => {
         const brokenImages = [];
 
         page.on('response', response => {
@@ -65,7 +65,7 @@ test.describe('SUNTEK QC — Technical Quality', () => {
             }
         });
 
-        await page.goto('/products/firming-vegan-collagen-prep-serum', { waitUntil: 'domcontentloaded' });
+        await page.goto(merchant.products.default.path, { waitUntil: 'domcontentloaded' });
 
         if (brokenImages.length > 0) {
             console.warn('[Broken PDP Images]', brokenImages);
@@ -87,9 +87,9 @@ test.describe('SUNTEK QC — Technical Quality', () => {
         expect(jsExceptions).toHaveLength(0);
     });
 
-    test('Technical — Collection page loads without unhandled JS exceptions', async ({ page }) => {
+    test('Technical — Collection page loads without unhandled JS exceptions', async ({ page, merchant }) => {
         const consoleErrors = captureConsoleErrors(page);
-        await page.goto('/collections/best-sellers', { waitUntil: 'domcontentloaded' });
+        await page.goto(merchant.pages.collection, { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(2000);
 
         const jsExceptions = consoleErrors.getErrors().filter(e => e.type === 'pageerror');
@@ -99,9 +99,9 @@ test.describe('SUNTEK QC — Technical Quality', () => {
         expect(jsExceptions).toHaveLength(0);
     });
 
-    test('Technical — PDP loads without unhandled JS exceptions', async ({ page }) => {
+    test('Technical — PDP loads without unhandled JS exceptions', async ({ page, merchant }) => {
         const consoleErrors = captureConsoleErrors(page);
-        await page.goto('/products/firming-vegan-collagen-prep-serum', { waitUntil: 'domcontentloaded' });
+        await page.goto(merchant.products.default.path, { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(2000);
 
         const jsExceptions = consoleErrors.getErrors().filter(e => e.type === 'pageerror');
@@ -128,27 +128,29 @@ test.describe('SUNTEK QC — Technical Quality', () => {
 
     // ── SEO / Meta tags ────────────────────────────────────────────────────────
 
+    // Path resolved per-merchant at test-run time via the `merchant` fixture,
+    // not baked in here, so this same loop runs correctly for every merchant.
     const seoPages = [
-        { name: 'Homepage',    path: '/' },
-        { name: 'Collection',  path: '/collections/best-sellers' },
-        { name: 'PDP',         path: '/products/firming-vegan-collagen-prep-serum' },
+        { name: 'Homepage',   pathOf: merchant => '/' },
+        { name: 'Collection', pathOf: merchant => merchant.pages.collection },
+        { name: 'PDP',        pathOf: merchant => merchant.products.default.path },
     ];
 
-    for (const { name, path } of seoPages) {
-        test(`Technical — ${name} has a non-empty title tag`, async ({ page }) => {
-            await page.goto(path, { waitUntil: 'domcontentloaded' });
+    for (const { name, pathOf } of seoPages) {
+        test(`Technical — ${name} has a non-empty title tag`, async ({ page, merchant }) => {
+            await page.goto(pathOf(merchant), { waitUntil: 'domcontentloaded' });
             const title = await page.title();
             expect(title.trim().length).toBeGreaterThan(0);
         });
 
-        test(`Technical — ${name} has a meta description`, async ({ page }) => {
-            await page.goto(path, { waitUntil: 'domcontentloaded' });
+        test(`Technical — ${name} has a meta description`, async ({ page, merchant }) => {
+            await page.goto(pathOf(merchant), { waitUntil: 'domcontentloaded' });
             const desc = await page.locator('meta[name="description"]').getAttribute('content');
             expect(desc && desc.trim().length > 0).toBe(true);
         });
 
-        test(`Technical — ${name} has a canonical tag`, async ({ page }) => {
-            await page.goto(path, { waitUntil: 'domcontentloaded' });
+        test(`Technical — ${name} has a canonical tag`, async ({ page, merchant }) => {
+            await page.goto(pathOf(merchant), { waitUntil: 'domcontentloaded' });
             const canonical = await page.locator('link[rel="canonical"]').count();
             expect(canonical).toBeGreaterThan(0);
         });

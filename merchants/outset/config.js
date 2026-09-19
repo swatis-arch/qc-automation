@@ -77,21 +77,7 @@ module.exports = {
         { label: 'Skincare',      href: '/collections/skincare',        urlPattern: /skincare/     },
     ],
 
-    // -- Key selectors (verified from live site inspection) ----------------------
-    selectors: {
-        header:         'header.header, nav.nav',
-        logo:           'img.logo__image',
-        promoBar:       '.promo-bar, .announcement-bar',
-        hero:           '.hero, .hero-section, [class*="hero"]',
-        productCard:    '.product-card',
-        cartBadge:      '.nav__cart-count, .nav__cart-count-text',
-        miniCartDrawer: '.mini-cart, .cart-drawer, #CartDrawer, [class*="cart-drawer"], [class*="mini-cart"], .cart-notification',
-        mobileMenu:     '#navMenuWrapper',
-        hamburger:      'button.hamburger, button[aria-label="Open navigation"]',
-        searchButton:   'button[aria-label="Open search bar"], button.nav__search-toggler',
-        searchForm:     'form[action="/search"]',
-        addToCartBtn:   'button.product-form__btn, button[aria-label="Add to cart"]',
-        productTitle:   'h1[data-tmpl="product"], h1.product-form__title, h1',
-    },
+    // Selectors live in merchants/outset/locators.js, loaded via the
+    // LocatorManager (see merchants/index.js) as merchant.locators.
 
 };

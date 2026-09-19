@@ -40,6 +40,10 @@ const CartPage     = require('../core/cart/CartPage');
 const CheckoutPage = require('../core/checkout/CheckoutPage');
 const Navbar       = require('../core/navigation/Navbar');
 
+const { captureConsoleErrors }               = require('../utils/console');
+const { captureNetworkFailures }             = require('../utils/network');
+const { buildFailureEvidence, saveEvidenceFile } = require('../utils/evidence');
+
 // ---------------------------------------------------------------------------
 //  Shared setup helpers
 // ---------------------------------------------------------------------------
@@ -63,6 +67,64 @@ async function setupPage(page) {
 // ---------------------------------------------------------------------------
 
 const test = base.extend({
+
+    // -- evidenceCapture (auto) -------------------------------------------------
+    /**
+     * Runs for every test automatically -- no test needs to request it.
+     *
+     * Attaches console/network capture to the page for the duration of the
+     * test, then on failure builds structured failure evidence (per
+     * utils/evidence.js's schema) and saves it to reports/evidence/.
+     *
+     * This is the fixture that was previously missing: utils/evidence.js
+     * defined buildFailureEvidence/saveEvidenceFile but nothing ever called
+     * them, so reports/evidence/ stayed empty and ai/analyze-failure.js had
+     * nothing to analyze even when tests were genuinely failing.
+     */
+    evidenceCapture: [async ({ page }, use, testInfo) => {
+        const consoleCapture = captureConsoleErrors(page);
+        const networkCapture = captureNetworkFailures(page);
+
+        await use();
+
+        // Only judge on the LAST attempt Playwright will make for this test.
+        // An earlier attempt that fails and then passes on retry is flaky,
+        // not a real failure -- and without this guard, a test retried once
+        // (retries: 1 locally / 2 in CI) would write evidence for every
+        // failing attempt, double-counting (or wrongly counting a flaky-but-
+        // eventually-passing test as failed) in the report.
+        const isFinalAttempt = testInfo.retry >= testInfo.project.retries;
+        if (!isFinalAttempt) return;
+
+        const failed = testInfo.status !== testInfo.expectedStatus;
+        if (!failed) return;
+
+        try {
+            let merchantName = 'unknown';
+            const slug = testInfo.project.use.merchantSlug;
+            if (slug) {
+                merchantName = loadConfig(slug).name;
+            }
+
+            const evidence = buildFailureEvidence({
+                merchant:        merchantName,
+                testName:        testInfo.title,
+                browser:         testInfo.project.name,
+                url:             page.url(),
+                expected:        'Test to pass (see assertion in test body)',
+                actual:          testInfo.error?.message || 'Test failed or timed out',
+                playwrightError: (testInfo.errors || []).map(e => e.message).join('\n'),
+                consoleErrors:   consoleCapture.getErrors(),
+                networkErrors:   networkCapture.getFailures(),
+                testInfo,
+            });
+
+            saveEvidenceFile(evidence);
+        } catch (captureError) {
+            // Evidence capture must never mask the real test failure.
+            console.warn(`[evidenceCapture] Failed to save evidence: ${captureError.message}`);
+        }
+    }, { scope: 'test', auto: true }],
 
     // -- merchant --------------------------------------------------------------
     /**
@@ -137,7 +199,7 @@ const test = base.extend({
      */
     pdp: async ({ page, merchant }, use) => {
         await setupPage(page);
-        const pdpInstance = new PDPPage(page);
+        const pdpInstance = new PDPPage(page, merchant);
         await pdpInstance.navigateTo(merchant.products.default.handle);
         await use(pdpInstance);
     },
@@ -176,7 +238,7 @@ const test = base.extend({
      */
     withProduct: async ({ page, merchant }, use) => {
         await setupPage(page);
-        const pdpInstance  = new PDPPage(page);
+        const pdpInstance  = new PDPPage(page, merchant);
         const cartInstance = new CartPage(page);
 
         await pdpInstance.navigateTo(merchant.products.default.handle);
@@ -204,7 +266,7 @@ const test = base.extend({
      */
     atCheckout: async ({ page, merchant }, use) => {
         await setupPage(page);
-        const pdpInstance      = new PDPPage(page);
+        const pdpInstance      = new PDPPage(page, merchant);
         const cartInstance     = new CartPage(page);
         const checkoutInstance = new CheckoutPage(page);
 

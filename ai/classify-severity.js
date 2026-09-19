@@ -110,6 +110,25 @@ function groupBySeverity(results) {
 }
 
 /**
+ * Group RCA results by merchant name, sorted by most-affected merchant first.
+ * @param {Array} results - Array of { evidence, rca } (or raw evidence+rca merged objects)
+ * @returns {Array<{ merchant: string, failures: Array }>}
+ */
+function groupByMerchant(results) {
+    const byMerchant = {};
+
+    for (const item of results) {
+        const merchant = item.evidence?.merchant || item.merchant || 'Unknown';
+        if (!byMerchant[merchant]) byMerchant[merchant] = [];
+        byMerchant[merchant].push(item);
+    }
+
+    return Object.entries(byMerchant)
+        .map(([merchant, failures]) => ({ merchant, failures: sortBySeverity(failures) }))
+        .sort((a, b) => b.failures.length - a.failures.length || a.merchant.localeCompare(b.merchant));
+}
+
+/**
  * Format an RCA item as a human-readable summary string.
  * @param {Object} rca - Claude RCA output
  * @param {Object} [evidence] - Original failure evidence
@@ -138,5 +157,6 @@ module.exports = {
     getCategory,
     sortBySeverity,
     groupBySeverity,
+    groupByMerchant,
     formatRCASummary,
 };

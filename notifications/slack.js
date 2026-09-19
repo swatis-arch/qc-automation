@@ -33,10 +33,19 @@ const QA_REPORT    = path.join(process.cwd(), 'reports', 'qa-report.json');
  * @returns {Object} Slack API payload
  */
 function buildSlackPayload(report) {
-    const { summary, severity, failures, merchant } = report;
+    const { summary, severity, merchant, merchantBreakdown = [] } = report;
     const passRate    = summary.passRate;
     const isAllPassed = summary.failed === 0;
     const statusEmoji = isAllPassed ? '✅' : (severity.P0 > 0 ? '🔴' : severity.P1 > 0 ? '🟠' : '🟡');
+    const sevEmojis    = { P0: '🔴', P1: '🟠', P2: '🟡', P3: '🟢' };
+
+    // Slack hard limits: 50 blocks / message, ~3000 chars per section text.
+    // A full per-test breakdown (per QA's requested report format) can't fit
+    // for a large run, so Slack gets a merchant-wise summary + a capped
+    // preview per merchant; the complete table-per-merchant detail always
+    // lives in reports/qa-report.md (no such size limit there).
+    const MAX_MERCHANTS_SHOWN  = 5;
+    const MAX_FAILURES_PER_MERCHANT = 3;
 
     const blocks = [];
 
@@ -76,48 +85,67 @@ function buildSlackPayload(report) {
         });
     }
 
-    // ── Individual failures ───────────────────────────────────────────────────
-    const topFailures = (failures || [])
-        .filter(f => f.rca)
-        .sort((a, b) => {
-            const order = { P0: 0, P1: 1, P2: 2, P3: 3 };
-            return (order[a.rca.severity] || 99) - (order[b.rca.severity] || 99);
-        })
-        .slice(0, 5); // Cap at 5 failures in Slack to avoid message bloat
-
-    if (topFailures.length > 0) {
+    // ── Merchant-wise failure summary ────────────────────────────────────────
+    if (merchantBreakdown.length > 0) {
         blocks.push({ type: 'divider' });
         blocks.push({
             type: 'section',
-            text: { type: 'mrkdwn', text: `*Top Failures*` },
+            text: { type: 'mrkdwn', text: `*Merchant-wise Failure Summary*` },
         });
-
-        for (const failure of topFailures) {
-            const rca         = failure.rca || {};
-            const confidence  = Math.round((rca.confidence || 0) * 100);
-            const sevEmojis   = { P0: '🔴', P1: '🟠', P2: '🟡', P3: '🟢' };
-            const sevEmoji    = sevEmojis[rca.severity] || '❓';
-
+        // Slack sections allow up to 10 fields (2-col grid); chunk if needed.
+        for (let i = 0; i < merchantBreakdown.length; i += 10) {
             blocks.push({
                 type: 'section',
-                text: {
+                fields: merchantBreakdown.slice(i, i + 10).map(({ merchant: m, failedCount }) => ({
                     type: 'mrkdwn',
-                    text: [
-                        `${sevEmoji} *${failure.test || 'Unknown test'}* — ${failure.merchant || ''}`,
-                        `*Browser:* ${failure.browser || 'unknown'}   *URL:* \`${failure.url || '/'}\``,
-                        `*Probable Cause:* ${rca.probableCause || 'Unknown'}`,
-                        `*Confidence:* ${confidence}%   *Action:* ${rca.recommendedAction || 'Investigate manually'}`,
-                    ].join('\n'),
-                },
+                    text: `*${m}*\n${failedCount} failed`,
+                })),
             });
         }
 
-        if (failures.length > 5) {
+        // ── Per-merchant failure preview ─────────────────────────────────────
+        for (const { merchant: m, failedCount, failures } of merchantBreakdown.slice(0, MAX_MERCHANTS_SHOWN)) {
+            blocks.push({ type: 'divider' });
+            blocks.push({
+                type: 'section',
+                text: { type: 'mrkdwn', text: `*${m} — ${failedCount} Failed Test${failedCount === 1 ? '' : 's'}*` },
+            });
+
+            for (const { evidence, rca = {} } of failures.slice(0, MAX_FAILURES_PER_MERCHANT)) {
+                const confidence = Math.round((rca.confidence || 0) * 100);
+                const sevEmoji   = sevEmojis[rca.severity] || '❓';
+
+                blocks.push({
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: [
+                            `${sevEmoji} *${evidence.test || 'Unknown test'}* — \`${evidence.browser || 'unknown'}\` — \`${rca.severity || 'P3'}\``,
+                            `*Reason:* ${rca.probableCause || 'Unknown'}`,
+                            `*Confidence:* ${confidence}%   *Action:* ${rca.recommendedAction || 'Investigate manually'}`,
+                        ].join('\n'),
+                    },
+                });
+            }
+
+            if (failedCount > MAX_FAILURES_PER_MERCHANT) {
+                blocks.push({
+                    type: 'context',
+                    elements: [{
+                        type: 'mrkdwn',
+                        text: `_...and ${failedCount - MAX_FAILURES_PER_MERCHANT} more for ${m}. Full table: reports/qa-report.md_`,
+                    }],
+                });
+            }
+        }
+
+        if (merchantBreakdown.length > MAX_MERCHANTS_SHOWN) {
+            blocks.push({ type: 'divider' });
             blocks.push({
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `_...and ${failures.length - 5} more failures. See the full report._`,
+                    text: `_...and ${merchantBreakdown.length - MAX_MERCHANTS_SHOWN} more merchants with failures. Full breakdown: reports/qa-report.md_`,
                 },
             });
         }

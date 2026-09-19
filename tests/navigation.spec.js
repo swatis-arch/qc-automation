@@ -9,27 +9,35 @@
  * Regression Catalogue IDs: NAV001
  * Priority: P1
  * Type: Universal
+ *
+ * The Skincare / About Us mega-menu tests below cover content that only
+ * exists on theoutset.com (a "Skincare" category, a "/pages/hyaluroset-complex"
+ * page) — there's no config field that generalizes brand-specific mega-menu
+ * content, so those tests explicitly skip for every other merchant rather
+ * than being forced to "pass" against markup that doesn't exist.
  */
 
 const { test, expect } = require('../fixtures/base');
+const url               = require('url');
 
 test.describe('SUNTEK QC — Navigation [NAV001]', () => {
 
     // ── Journey: Homepage → Collection → PDP ──────────────────────────────────
 
-    test('@smoke NAV001 — Full journey: Homepage → Best Sellers PLP → PDP', async ({ homepage, page }) => {
+    test('@smoke NAV001 — Full journey: Homepage → Collection → PDP', async ({ homepage, page, merchant }) => {
         // Step 1: Start on homepage
-        await expect(page).toHaveURL(/theoutset\.com/);
+        const host = new url.URL(merchant.urls.production).hostname.replace('.', '\\.');
+        await expect(page).toHaveURL(new RegExp(host));
 
-        // Step 2: Navigate to Best Sellers
-        await page.locator('a[href="/collections/best-sellers"]').filter({ visible: true }).first().click();
-        await page.waitForLoadState('domcontentloaded');
-        await expect(page).toHaveURL(/best-sellers/, { timeout: 15_000 });
+        // Step 2: Navigate to the merchant's configured collection
+        await page.goto(merchant.pages.collection, { waitUntil: 'domcontentloaded' });
+        await expect(page).toHaveURL(new RegExp(merchant.pages.collection.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout: 15_000 });
 
         // Step 3: Click first product card → PDP
-        const firstCard = page.locator('.product-card__title a').first();
-        await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
-        await firstCard.click();
+        const firstCard = page.locator(merchant.locators.get('productCard')).first();
+        const cardLink  = firstCard.locator('a[href*="/products/"]').filter({ visible: true }).first();
+        await cardLink.waitFor({ state: 'visible', timeout: 15_000 });
+        await cardLink.click();
         await expect(page).toHaveURL(/\/products\//, { timeout: 15_000 });
 
         // Step 4: Verify PDP loaded without 404
@@ -37,15 +45,17 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
         await expect(page.locator('h1')).toBeVisible({ timeout: 10_000 });
     });
 
-    // ── Mega-menus ─────────────────────────────────────────────────────────────
+    // ── Mega-menus (Outset-specific content — see file header) ────────────────
 
-    test('@smoke NAV001 — Skincare mega-menu opens on hover', async ({ navbar, page }) => {
+    test('@smoke NAV001 — Skincare mega-menu opens on hover', async ({ navbar, page, merchant }) => {
+        test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
         await navbar.hoverSkincare();
         const submenu = page.locator('.menu-item__submenu').first();
         await expect(submenu).toBeVisible({ timeout: 5_000 });
     });
 
-    test('NAV001 — Skincare submenu sub-category links are visible', async ({ navbar, page }) => {
+    test('NAV001 — Skincare submenu sub-category links are visible', async ({ navbar, page, merchant }) => {
+        test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
         await navbar.verifySkincareSubmenu();
     });
 
@@ -57,7 +67,8 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
     ];
 
     for (const { label, href, pattern } of skincareLinks) {
-        test(`NAV001 — Skincare submenu → "${label}" collection loads`, async ({ navbar, page }) => {
+        test(`NAV001 — Skincare submenu → "${label}" collection loads`, async ({ navbar, page, merchant }) => {
+            test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
             await navbar.hoverSkincare();
             const link = page.locator(`.menu-item__submenu a[href="${href}"]`).first();
             await link.waitFor({ state: 'visible', timeout: 5_000 });
@@ -67,9 +78,10 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
         });
     }
 
-    // ── About Us mega-menu ─────────────────────────────────────────────────────
+    // ── About Us mega-menu (Outset-specific content — see file header) ────────
 
-    test('@smoke NAV001 — About Us mega-menu opens on hover', async ({ navbar, page }) => {
+    test('@smoke NAV001 — About Us mega-menu opens on hover', async ({ navbar, page, merchant }) => {
+        test.skip(merchant.slug !== 'outset', 'About Us mega-menu is Outset-specific content');
         await navbar.hoverAboutUs();
         const submenu = page.locator('.menu-item__submenu.is-expanded');
         await expect(submenu.locator('a[href="/pages/hyaluroset-complex"]').first()).toBeVisible({ timeout: 5_000 });
@@ -86,23 +98,26 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
 
     // ── Mobile navigation ──────────────────────────────────────────────────────
 
-    test('@smoke NAV001 — Mobile menu contains key navigation links', async ({ navbar, page }) => {
+    test('@smoke NAV001 — Mobile menu contains key navigation links', async ({ navbar, page, merchant }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await navbar.openMobileMenu();
 
-        const mobileMenu = page.locator('#navMenuWrapper');
+        const mobileMenu = page.locator(merchant.locators.get('mobileMenu'));
         await expect(mobileMenu).toBeVisible();
 
-        // Verify key links exist in mobile menu
-        await expect(mobileMenu.locator('a[href="/collections/best-sellers"]').first()).toBeVisible();
-        await expect(mobileMenu.locator('a[href*="collections"]').first()).toBeVisible();
+        // Verify at least one configured nav link exists in the mobile menu
+        const links = merchant.navLinks || [];
+        if (links.length > 0) {
+            await expect(mobileMenu.locator(`a[href="${links[0].href}"]`).first()).toBeVisible();
+        }
+        await expect(mobileMenu.locator('a[href*="/"]').first()).toBeVisible();
     });
 
-    test('NAV001 — Mobile menu social links (Instagram and TikTok)', async ({ navbar, page }) => {
+    test('NAV001 — Mobile menu social links (Instagram and TikTok)', async ({ navbar, page, merchant }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await navbar.openMobileMenu();
 
-        const menu = page.locator('#navMenuWrapper');
+        const menu = page.locator(merchant.locators.get('mobileMenu'));
         const instagram = menu.locator('a[href*="instagram.com"]').first();
         const tiktok    = menu.locator('a[href*="tiktok.com"]').first();
 

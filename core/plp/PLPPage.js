@@ -4,16 +4,23 @@
  * Encapsulates interactions with Shopify collection/PLP pages.
  *
  * Merchant config is injected via the constructor — no hardcoded merchant.
+ * Product card locators/sub-elements come from the shared ProductCardElement
+ * (same business element HomePage uses for its bestseller grid).
  *
  * @param {import('@playwright/test').Page} page
  * @param {object} [merchant] - Optional merchant config (used for default collection path)
  */
+
+const LocatorManager     = require('../../locators/LocatorManager');
+const ProductCardElement = require('../../elements/ProductCardElement');
 
 class PLPPage {
 
     constructor(page, merchant = null) {
         this.page     = page;
         this.merchant = merchant;
+        this.locators = merchant ? merchant.locators : new LocatorManager('none', {});
+        this.productCard = new ProductCardElement(page, this.locators);
     }
 
     // -- Navigation -------------------------------------------------------------
@@ -38,21 +45,21 @@ class PLPPage {
 
     // -- Product cards ----------------------------------------------------------
 
-    /** All product cards on the PLP */
+    /** All product cards on the PLP — merchant's productCard locator first, then a broad fallback */
     get productCards() {
-        return this.page.locator('.product-card, .product-item, [class*="product-card"]');
+        return this.productCard.all;
     }
 
     /** First visible product card */
     get firstCard() {
-        return this.productCards.first();
+        return this.productCard.first;
     }
 
     /**
      * Wait for at least one product card to appear.
      */
     async waitForProducts() {
-        await this.firstCard.waitFor({ state: 'visible', timeout: 15_000 });
+        await this.productCard.waitForAny();
     }
 
     /**
@@ -60,24 +67,24 @@ class PLPPage {
      * @returns {Promise<number>}
      */
     async getProductCount() {
-        return this.productCards.count();
+        return this.productCard.count();
     }
 
     // -- Product card sub-elements ----------------------------------------------
 
     /** Returns the title link of the first product card */
     get firstCardTitle() {
-        return this.firstCard.locator('a[href*="/products/"], .product-card__title a').first();
+        return this.productCard.titleLink();
     }
 
     /** Returns the image of the first product card */
     get firstCardImage() {
-        return this.firstCard.locator('img').first();
+        return this.productCard.image();
     }
 
     /** Returns the price element of the first product card */
     get firstCardPrice() {
-        return this.firstCard.locator('.price, [class*="price"]').first();
+        return this.productCard.price();
     }
 
     // -- Navigation from PLP ----------------------------------------------------

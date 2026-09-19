@@ -41,9 +41,10 @@ jobs:
   # ── Smoke Tests ─────────────────────────────────────────────────────────────
   smoke:
     name: Smoke Tests — Desktop Chromium
-    if: >
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'smoke')
+    # NOTE: there is no `pull_request:` trigger in the `on:` block above, so
+    # a `pull_request` branch here would be dead code. Add `pull_request:`
+    # to `on:` first if you want smoke tests to run automatically on PRs.
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'smoke'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -108,7 +109,10 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'outset' }}
+          # Empty MERCHANT runs every slug in ACTIVE_MERCHANTS (merchants/index.js).
+          # On the nightly schedule there is no `inputs.merchant`, so this must NOT
+          # fall back to a single slug or the other merchants would silently never run.
+          MERCHANT: ${{ github.event.inputs.merchant }}
         continue-on-error: true    # Continue to AI analysis even if tests fail
 
       - name: Run Claude AI failure analysis
@@ -116,20 +120,21 @@ jobs:
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           CLAUDE_MODEL:   claude-3-5-sonnet-20241022
-          MERCHANT:       ${{ github.event.inputs.merchant || 'outset' }}
+          MERCHANT:       ${{ github.event.inputs.merchant }}
         continue-on-error: true    # Non-fatal if Claude is unavailable
 
       - name: Generate consolidated QA report
         run: node ai/generate-report.js
         env:
-          MERCHANT: ${{ github.event.inputs.merchant || 'outset' }}
+          MERCHANT:     ${{ github.event.inputs.merchant }}
+          TRIGGERED_BY: ${{ github.event.inputs.triggered_by || github.event_name }}
         continue-on-error: true
 
       - name: Send Slack notification
         run: node notifications/slack.js
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          MERCHANT:          ${{ github.event.inputs.merchant || 'outset' }}
+          MERCHANT:          ${{ github.event.inputs.merchant }}
           TRIGGERED_BY:      ${{ github.event.inputs.triggered_by || github.event_name }}
         continue-on-error: true    # Non-fatal if Slack is not configured
 

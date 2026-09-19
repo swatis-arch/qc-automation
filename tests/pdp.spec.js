@@ -113,8 +113,8 @@ test.describe('SUNTEK QC — Product Detail Page [PDP001-PDP003, CART001]', () =
         expect(hasItems).toBeTruthy();
     });
 
-    test('CART001 — Cart badge increments after Add to Cart', async ({ pdp, page }) => {
-        const badge  = page.locator('.nav__cart-count span').first();
+    test('CART001 — Cart badge increments after Add to Cart', async ({ pdp, page, merchant }) => {
+        const badge  = page.locator(merchant.locators.get('cartBadge')).first();
         const before = parseInt(await badge.innerText().catch(() => '0'));
 
         const inStock = await pdp.isInStock();
@@ -128,11 +128,11 @@ test.describe('SUNTEK QC — Product Detail Page [PDP001-PDP003, CART001]', () =
 
     // ── Console + network evidence ─────────────────────────────────────────────
 
-    test('PDP001 — PDP loads without critical console errors', async ({ page }) => {
+    test('PDP001 — PDP loads without critical console errors', async ({ page, merchant }) => {
         const consoleErrors = captureConsoleErrors(page);
         const networkErrors = captureNetworkFailures(page);
 
-        await page.goto('/products/firming-vegan-collagen-prep-serum', { waitUntil: 'domcontentloaded' });
+        await page.goto(merchant.products.default.path, { waitUntil: 'domcontentloaded' });
         await page.locator('h1').first().waitFor({ state: 'visible', timeout: 15_000 });
 
         const jsErrors = consoleErrors.getErrors().filter(e => e.type === 'pageerror');
@@ -156,19 +156,14 @@ test.describe('SUNTEK QC — Product Detail Page [PDP001-PDP003, CART001]', () =
     });
 
     // ── Multiple product handles ────────────────────────────────────────────────
+    // Driven by merchant.products (default + secondary) instead of a hardcoded list.
 
-    const products = [
-        { handle: 'firming-vegan-collagen-prep-serum',                      label: 'Collagen Serum' },
-        { handle: 'total-clarity-dark-spot-serum-vitamin-c-alternative',   label: 'Dark Spot Serum' },
-    ];
-
-    for (const { handle, label } of products) {
-        test(`PDP001 — "${label}" loads without 404`, async ({ pdp, page }) => {
-            await pdp.navigateTo(handle);
-            await expect(page).toHaveURL(new RegExp(handle), { timeout: 15_000 });
-            await expect(page.locator('body')).not.toContainText('404');
-            await expect(pdp.productTitle).toBeVisible();
-        });
-    }
+    test('PDP001 — Secondary product loads without 404', async ({ pdp, page, merchant }) => {
+        const { handle } = merchant.products.secondary;
+        await pdp.navigateTo(handle);
+        await expect(page).toHaveURL(new RegExp(handle), { timeout: 15_000 });
+        await expect(page.locator('body')).not.toContainText('404');
+        await expect(pdp.productTitle).toBeVisible();
+    });
 
 });

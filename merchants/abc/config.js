@@ -1,46 +1,53 @@
 /**
  * merchants/abc/config.js
  *
- * Merchant configuration TEMPLATE — rename this folder to your brand's slug
- * (e.g. merchants/glossier/) and fill in every value below.
+ * Merchant configuration for ABC Carpet & Home (abchome.com).
+ * Verified against the live storefront on 2026-09-16.
+ * Runs on Shopify's newer "section groups" header architecture
+ * (#header-group), not a classic <header class="header"> Dawn layout.
  */
 
 module.exports = {
 
-    name: 'ABC Brand',
+    // -- Identity ----------------------------------------------------------------
+    name: 'ABC Carpet & Home',
     slug: 'abc',
 
+    // -- URLs --------------------------------------------------------------------
     urls: {
-        production: 'https://abc-brand.com',        // <- Replace with real production URL
-        staging:    'https://staging.abc-brand.com', // <- Replace or set same as production
+        production: 'https://abchome.com',
+        staging:    'https://abchome.com',   // No separate staging URL published
     },
 
+    // -- Key page paths (relative) -----------------------------------------------
     pages: {
         homepage:    '/',
-        collection:  '/collections/all',
-        product:     '/products/sample-product',
-        search:      '/search?q=product',
+        collection:  '/collections/furniture',
+        product:     '/products/delancey-2-piece-sectional',
+        search:      '/search?q=rug',
         cart:        '/cart',
         account:     '/account',
     },
 
+    // -- Representative products -------------------------------------------------
     products: {
         default: {
-            handle: 'sample-product',
-            name:   'Sample Product',
-            path:   '/products/sample-product',
+            handle: 'delancey-2-piece-sectional',
+            name:   'Delancey 2-Piece Sectional',
+            path:   '/products/delancey-2-piece-sectional',
         },
         secondary: {
-            handle: 'another-product',
-            name:   'Another Product',
-            path:   '/products/another-product',
+            handle: 'alessia-coffee-table',
+            name:   'Alessia Coffee Table',
+            path:   '/products/alessia-coffee-table',
         },
     },
 
+    // -- Feature flags -----------------------------------------------------------
     features: {
         subscription:    false,
-        search:          false,
-        reviews:         false,
+        search:          true,
+        reviews:         true,
         bundles:         false,
         quiz:            false,
         rewards:         false,
@@ -48,37 +55,31 @@ module.exports = {
         gwp:             false,
     },
 
+    // -- Third-party integrations ------------------------------------------------
     integrations: {
         subscriptionProvider: null,
-        reviewsProvider:      null,
-        searchProvider:       null,
-        emailProvider:        null,
-        analyticsProvider:    null,
+        reviewsProvider:      'yotpo',
+        searchProvider:       'searchspring',
+        emailProvider:        'klaviyo',
+        analyticsProvider:    'ga4',
     },
 
+    // -- Checkout settings -------------------------------------------------------
     checkout: {
         productionPurchaseAllowed: false,
         checkoutType: 'shopify',
     },
 
+    // -- Custom test identifiers -------------------------------------------------
     customTests: [],
 
-    navLinks: [],
+    // -- Navigation links to validate --------------------------------------------
+    navLinks: [
+        { label: 'All Rugs',           href: '/collections/rugs',      urlPattern: /\/collections\/rugs/ },
+        { label: 'Discover Furniture', href: '/collections/furniture', urlPattern: /\/collections\/furniture/ },
+    ],
 
-    selectors: {
-        header:         'header, nav',
-        logo:           'img.logo__image, .header__logo img, a.logo img',
-        promoBar:       '.promo-bar, .announcement-bar',
-        hero:           '.hero, .hero-section, [class*="hero"]',
-        productCard:    '.product-card, .product-item, [class*="product-card"]',
-        cartBadge:      '.nav__cart-count, .cart-count, [class*="cart-count"]',
-        miniCartDrawer: '.mini-cart, .cart-drawer, #CartDrawer, [class*="cart-drawer"]',
-        mobileMenu:     '#navMenuWrapper, .mobile-nav, [class*="mobile-menu"]',
-        hamburger:      'button.hamburger, button[aria-label*="menu" i], button[aria-label*="navigation" i]',
-        searchButton:   'button[aria-label*="search" i], button.nav__search-toggler',
-        searchForm:     'form[action="/search"]',
-        addToCartBtn:   'button[name="add"], button[aria-label="Add to cart"], .product-form__submit',
-        productTitle:   'h1',
-    },
+    // Selectors live in merchants/abc/locators.js, loaded via the
+    // LocatorManager (see merchants/index.js) as merchant.locators.
 
 };

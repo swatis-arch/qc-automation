@@ -5,23 +5,29 @@
  * operations. Shared across all page objects that need navigation.
  *
  * Merchant config is injected via constructor — no hardcoded merchant.
+ * Mobile menu open/close is delegated to the shared MobileMenuElement
+ * (same business element HomePage uses).
  *
  * @param {import('@playwright/test').Page} page
  * @param {object} merchant - Merchant config from merchants/<slug>/config.js
  */
 
+const MobileMenuElement = require('../../elements/MobileMenuElement');
+
 class Navbar {
 
     constructor(page, merchant) {
-        this.page     = page;
-        this.merchant = merchant;
+        this.page       = page;
+        this.merchant   = merchant;
+        this.locators   = merchant.locators;
+        this.mobileMenu = new MobileMenuElement(page, this.locators);
     }
 
     // -- Logo -------------------------------------------------------------------
 
     /** Click the site logo and return to homepage */
     async clickLogo() {
-        await this.page.locator('a.header__heading-link, a[href="/"]').first().click();
+        await this.page.locator(this.locators.resolve('logo', 'a[href="/"]')).first().click();
         await this.page.waitForLoadState('domcontentloaded');
     }
 
@@ -42,9 +48,9 @@ class Navbar {
         }
     }
 
-    /** Click the Best Sellers nav link */
-    async clickBestSellers() {
-        await this.page.locator('a[href="/collections/best-sellers"]').filter({ visible: true }).first().click();
+    /** Click a nav link by its href (e.g. one of merchant.navLinks) */
+    async clickNavLink(href) {
+        await this.page.locator(`a[href="${href}"]`).filter({ visible: true }).first().click();
         await this.page.waitForLoadState('domcontentloaded');
     }
 
@@ -87,30 +93,12 @@ class Navbar {
 
     /** Open the mobile hamburger menu */
     async openMobileMenu() {
-        const hamburger = this.page.locator(
-            'button.hamburger, button[aria-label*="Open navigation"], button[aria-label*="menu" i]'
-        ).first();
-        await hamburger.waitFor({ state: 'visible', timeout: 10_000 });
-        await hamburger.click();
-        await this.page.locator(this.merchant.selectors.mobileMenu).waitFor({ state: 'visible', timeout: 10_000 });
+        await this.mobileMenu.open();
     }
 
     /** Close the mobile hamburger menu */
     async closeMobileMenu() {
-        const closeBtn = this.page.locator([
-            'button[aria-label*="Close navigation" i]',
-            'button[aria-label*="close menu" i]',
-            'button[aria-expanded="true"]',
-            '.nav__close-btn',
-            `${this.merchant.selectors.mobileMenu} button[aria-label*="close" i]`,
-        ].join(', ')).first();
-
-        if (await closeBtn.count() > 0) {
-            await closeBtn.click();
-        } else {
-            await this.page.keyboard.press('Escape');
-        }
-        await this.page.locator(this.merchant.selectors.mobileMenu).waitFor({ state: 'hidden', timeout: 10_000 });
+        await this.mobileMenu.close();
     }
 }
 

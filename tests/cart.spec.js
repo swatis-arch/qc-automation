@@ -52,8 +52,9 @@ test.describe('SUNTEK QC — Cart [CART001-CART003]', () => {
 
     test('@smoke CART001 — /cart page loads with added product', async ({ withProduct, page }) => {
         // Close mini-cart (if any) and navigate to the cart page
+        const { cart } = withProduct;
         await page.goto('/cart', { waitUntil: 'domcontentloaded' });
-        await page.locator('.cart, #cart, [class*="cart__item"]').first().waitFor({ state: 'visible', timeout: 15_000 });
+        await cart.waitForCart();
         await expect(page.locator('body')).not.toContainText('404');
     });
 

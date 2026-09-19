@@ -1,46 +1,58 @@
 /**
  * merchants/revitin/config.js
  *
- * Merchant configuration PLACEHOLDER for Revitin.
- * Fill in all values before adding 'revitin' to ACTIVE_MERCHANTS.
+ * Merchant configuration for Revitin (revitin.com).
+ * Verified against the live storefront on 2026-09-16.
+ *
+ * NOTE: Revitin is effectively a single-product catalog (one toothpaste,
+ * sold in different pack sizes/flavors as separate product handles) built
+ * on a fully custom Tailwind-based theme, not Shopify Dawn. The
+ * /collections/all page mostly re-renders nav/announcement links rather
+ * than a real product grid, so PLP-grid assumptions (multiple distinct
+ * product cards) in core/plp/PLPPage.js may not hold for this merchant.
  */
 
 module.exports = {
 
+    // -- Identity ----------------------------------------------------------------
     name: 'Revitin',
     slug: 'revitin',
 
+    // -- URLs --------------------------------------------------------------------
     urls: {
-        production: 'https://revitin.com',         // <- Verify this URL
-        staging:    'https://revitin.com',          // <- Update when staging available
+        production: 'https://revitin.com',
+        staging:    'https://revitin.com',   // No separate staging URL published
     },
 
+    // -- Key page paths (relative) -----------------------------------------------
     pages: {
         homepage:    '/',
-        collection:  '/collections/all',            // <- Replace with a real collection
-        product:     '/products/sample-product',    // <- Replace with a real product handle
-        search:      '/search?q=product',
+        collection:  '/collections/all',
+        product:     '/products/revitin-natural-toothpaste',
+        search:      '/search?q=toothpaste',   // Site has no search UI — see features.search
         cart:        '/cart',
         account:     '/account',
     },
 
+    // -- Representative products -------------------------------------------------
     products: {
         default: {
-            handle: 'sample-product',               // <- Replace with real handle
-            name:   'Sample Product',
-            path:   '/products/sample-product',
+            handle: 'revitin-natural-toothpaste',
+            name:   'Revitin Toothpaste',
+            path:   '/products/revitin-natural-toothpaste',
         },
         secondary: {
-            handle: 'another-product',
-            name:   'Another Product',
-            path:   '/products/another-product',
+            handle: 'revitin-toothpaste-3-tubes-mint',
+            name:   'Revitin Toothpaste (3 Tubes)',
+            path:   '/products/revitin-toothpaste-3-tubes-mint',
         },
     },
 
+    // -- Feature flags -----------------------------------------------------------
     features: {
-        subscription:    false,
-        search:          false,
-        reviews:         false,
+        subscription:    true,
+        search:          false,   // No search icon/form found in header
+        reviews:         true,
         bundles:         false,
         quiz:            false,
         rewards:         false,
@@ -48,39 +60,32 @@ module.exports = {
         gwp:             false,
     },
 
+    // -- Third-party integrations ------------------------------------------------
     integrations: {
-        subscriptionProvider: null,
-        reviewsProvider:      null,
+        subscriptionProvider: 'recharge',
+        reviewsProvider:      'judgeme',
         searchProvider:       null,
-        emailProvider:        null,
-        analyticsProvider:    null,
+        emailProvider:        'klaviyo',
+        analyticsProvider:    'ga4',
     },
 
+    // -- Checkout settings -------------------------------------------------------
     checkout: {
         productionPurchaseAllowed: false,
         checkoutType: 'shopify',
     },
 
+    // -- Custom test identifiers -------------------------------------------------
     customTests: [],
 
+    // -- Navigation links to validate --------------------------------------------
     navLinks: [
-        // { label: 'Shop All', href: '/collections/all', urlPattern: /\/collections\/all/ },
+        { label: 'Shop',        href: '/products/revitin-natural-toothpaste/Mint', urlPattern: /revitin-natural-toothpaste/ },
+        { label: 'About',       href: '/pages/about',       urlPattern: /\/pages\/about/ },
+        { label: 'Ingredients', href: '/pages/ingredients', urlPattern: /\/pages\/ingredients/ },
     ],
 
-    selectors: {
-        header:         'header, nav',
-        logo:           'img.logo__image, .header__logo img, a.logo img',
-        promoBar:       '.promo-bar, .announcement-bar',
-        hero:           '.hero, .hero-section, [class*="hero"]',
-        productCard:    '.product-card, .product-item, [class*="product-card"]',
-        cartBadge:      '.nav__cart-count, .cart-count, [class*="cart-count"]',
-        miniCartDrawer: '.mini-cart, .cart-drawer, #CartDrawer, [class*="cart-drawer"]',
-        mobileMenu:     '#navMenuWrapper, .mobile-nav, [class*="mobile-menu"]',
-        hamburger:      'button.hamburger, button[aria-label*="menu" i], button[aria-label*="navigation" i]',
-        searchButton:   'button[aria-label*="search" i], button.nav__search-toggler',
-        searchForm:     'form[action="/search"]',
-        addToCartBtn:   'button[name="add"], button[aria-label="Add to cart"], .product-form__submit',
-        productTitle:   'h1',
-    },
+    // Selectors live in merchants/revitin/locators.js, loaded via the
+    // LocatorManager (see merchants/index.js) as merchant.locators.
 
 };

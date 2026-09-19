@@ -7,6 +7,12 @@
  * Regression Catalogue IDs: PLP001
  * Priority: P1
  * Type: Universal
+ *
+ * The parameterised "category collection" block below (cleansers,
+ * moisturizers, serums-oils) exercises Outset's skincare category taxonomy,
+ * which doesn't exist for other merchants — it's skipped for everyone else.
+ * Every other test drives its collection handle from merchant.pages.collection
+ * / merchant.locators.get('productCard') rather than a hardcoded Outset value.
  */
 
 const { test, expect }           = require('../fixtures/base');
@@ -16,8 +22,8 @@ test.describe('SUNTEK QC — Product Listing Page [PLP001]', () => {
 
     // ── Page load ──────────────────────────────────────────────────────────────
 
-    test('@smoke PLP001 — Best Sellers collection loads', async ({ plp, page }) => {
-        await expect(page).toHaveURL(/best-sellers/, { timeout: 15_000 });
+    test('@smoke PLP001 — Configured collection loads', async ({ plp, page, merchant }) => {
+        await expect(page).toHaveURL(new RegExp(merchant.pages.collection.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout: 15_000 });
         await expect(page.locator('body')).not.toContainText('404');
     });
 
@@ -57,9 +63,9 @@ test.describe('SUNTEK QC — Product Listing Page [PLP001]', () => {
 
     // ── Collection content volume ──────────────────────────────────────────────
 
-    test('PLP001 — Collection has at least 4 product cards', async ({ plp, page }) => {
+    test('PLP001 — Collection has at least 1 product card', async ({ plp, page }) => {
         const count = await plp.getProductCount();
-        expect(count).toBeGreaterThanOrEqual(4);
+        expect(count).toBeGreaterThanOrEqual(1);
     });
 
     // ── PDP navigation from PLP ────────────────────────────────────────────────
@@ -71,9 +77,8 @@ test.describe('SUNTEK QC — Product Listing Page [PLP001]', () => {
         await expect(page.locator('h1')).toBeVisible({ timeout: 10_000 });
     });
 
-    // ── Collection URL variants ────────────────────────────────────────────────
+    // ── Collection URL variants (Outset skincare taxonomy — see file header) ──
 
-    // Parameterised: verify multiple collections load correctly
     const collections = [
         { handle: 'best-sellers',           pattern: /best-sellers/ },
         { handle: 'cleansers-exfoliators',  pattern: /cleansers/ },
@@ -82,7 +87,8 @@ test.describe('SUNTEK QC — Product Listing Page [PLP001]', () => {
     ];
 
     for (const { handle, pattern } of collections) {
-        test(`PLP001 — Collection "${handle}" loads without 404`, async ({ plp, page }) => {
+        test(`PLP001 — Collection "${handle}" loads without 404`, async ({ plp, page, merchant }) => {
+            test.skip(merchant.slug !== 'outset', 'Skincare category collections are Outset-specific');
             await plp.navigateTo(handle);
             await expect(page).toHaveURL(pattern, { timeout: 15_000 });
             await expect(page.locator('body')).not.toContainText('404');
@@ -92,10 +98,10 @@ test.describe('SUNTEK QC — Product Listing Page [PLP001]', () => {
 
     // ── Network check ──────────────────────────────────────────────────────────
 
-    test('PLP001 — No 4xx/5xx errors loading the collection', async ({ page }) => {
+    test('PLP001 — No 4xx/5xx errors loading the collection', async ({ page, merchant }) => {
         const network = captureNetworkFailures(page);
-        await page.goto('/collections/best-sellers', { waitUntil: 'networkidle' });
-        await page.locator('.product-card').first().waitFor({ state: 'visible', timeout: 15_000 });
+        await page.goto(merchant.pages.collection, { waitUntil: 'networkidle' });
+        await page.locator(merchant.locators.get('productCard')).first().waitFor({ state: 'visible', timeout: 15_000 });
 
         const failures = network.getFailures()
             .filter(f => f.resourceType === 'document' || f.resourceType === 'fetch' || f.resourceType === 'xhr');
