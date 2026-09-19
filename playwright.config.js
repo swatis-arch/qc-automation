@@ -12,17 +12,17 @@
  *
  * -- Running tests ------------------------------------------------------------
  *   npm test                                   Full regression (all merchants)
- *   npm run test:merchant the-outset           Single merchant, all browsers
- *   npm run test:smoke                         @smoke subset, all merchants
- *   npm run test:desktop                       Desktop Chromium, all merchants
- *   npm run test:mobile                        Mobile Chrome, all merchants
+ *   npm run test:smoke                         @smoke subset, desktop, $MERCHANT (default outset)
+ *   npm run test:desktop                       Desktop Chromium, $MERCHANT (default outset)
+ *   npm run test:mobile                        Mobile Chrome, $MERCHANT (default outset)
  *   npm run test:headed                        Headed (debug) mode
- *   MERCHANT=the-outset npm test               Env-var filter (CI)
+ *   MERCHANT=koh npm test                      Env-var filter (CI)
  *   USE_STAGING=true npm test                  Run against staging URLs
+ *   npx playwright test --project=koh-desktop-chromium   One merchant + browser
  *
  * -- Adding a new merchant ----------------------------------------------------
- *   1. Copy merchants/brand-b/ to merchants/<your-slug>/
- *   2. Fill in merchants/<your-slug>/config.js
+ *   1. Copy merchants/outset/ to merchants/<your-slug>/
+ *   2. Fill in merchants/<your-slug>/config.js and locators.js
  *   3. Add '<your-slug>' to ACTIVE_MERCHANTS in merchants/index.js
  *   4. Run: npx playwright test --list   (verify new projects appear)
  */

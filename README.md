@@ -2,182 +2,246 @@
 
 > Multi-merchant Shopify QA/QC automation powered by **Playwright** and **Claude AI**.
 
-## Architecture
+Playwright decides PASS/FAIL. On failure, evidence is saved and sent to Claude for a
+probable root cause + severity. A consolidated report is posted to Slack. QA makes
+the final call. Full rules live in [CLAUDE.md](./CLAUDE.md).
+
+## How it works
 
 ```
-Merchant Config → Playwright Tests → PASS/FAIL
-                                        │
-                                      FAIL
-                                        │
-                                  Evidence JSON
-                              (screenshot + trace + console + network)
-                                        │
-                                   Claude API
-                                        │
-                             RCA + Severity + Confidence
-                                        │
-                              Consolidated QA Report
-                                        │
-                               Slack Notification
+merchants/index.js (ACTIVE_MERCHANTS)
+        │  one Playwright project per merchant × {desktop, mobile}
+        ▼
+tests/*.spec.js  ── use fixtures/base.js ──►  core/* page objects
+        │                                        │ use elements/* + merchant.locators
+        │                                        ▼
+        │                              merchants/<slug>/locators.js  (via LocatorManager)
+        ▼
+   PASS / FAIL
+        │ FAIL
+        ▼
+reports/evidence/*.json   (auto-saved by the `evidenceCapture` fixture:
+        │                  console + network errors + screenshot/video/trace paths)
+        ▼
+ai/analyze-failure.js  ──►  reports/rca/*.json        (Claude; mock RCA if no API key)
+        ▼
+ai/generate-report.js  ──►  reports/qa-report.{json,md}
+        ▼
+notifications/slack.js ──►  Slack incoming webhook
 ```
 
-## Technology Stack
+Slack can also *start* a run: the `/qc` slash command (see [slack-bot/](./slack-bot/README.md))
+triggers the GitHub Actions workflow, and results come back through the same webhook.
+
+## Technology stack
 
 | Component | Technology |
 |-----------|------------|
 | Language | JavaScript (CommonJS) |
-| Runtime | Node.js LTS |
-| Automation | Playwright Test |
-| Browsers | Chromium (desktop + mobile) |
-| AI Analysis | Claude (Anthropic) |
+| Runtime | Node.js 20+ (CI uses 22) |
+| Automation | `@playwright/test` (Chromium: Desktop Chrome + Pixel 7) |
+| AI analysis | Claude via the Anthropic Messages API (plain `fetch`, no SDK) |
 | CI/CD | GitHub Actions |
-| Reports | Playwright HTML + JSON |
-| Notifications | Slack |
+| Reports | Playwright HTML + JSON, custom QA report (JSON + Markdown) |
+| Notifications | Slack incoming webhook |
+| Slack `/qc` command | Cloudflare Worker in `slack-bot/` |
 
-## Project Structure
+## Project structure
 
 ```
-suntek-ai-qc/
-├── merchants/
-│   └── the-outset/
-│       └── config.js          ← Merchant URL, features, pages, integrations
+├── merchants/                     ← one folder per merchant + the registry
+│   ├── index.js                   ← ACTIVE_MERCHANTS list, loadConfig(), MERCHANT env filter
+│   ├── outset/  revitin/  koh/  abc/
+│   │   ├── config.js              ← URLs, page paths, products, feature flags, integrations
+│   │   └── locators.js            ← raw selector strings only (no logic)
 │
-├── tests/
-│   ├── homepage.spec.js       ← Homepage + nav regression
-│   ├── navigation.spec.js     ← Navigation flows
-│   ├── plp.spec.js            ← Product listing page
-│   ├── pdp.spec.js            ← Product detail page + ATC
-│   ├── cart.spec.js           ← Cart operations
-│   ├── checkout.spec.js       ← Checkout flow
-│   ├── visual.spec.js         ← Screenshot regression
-│   └── technical.spec.js      ← Broken images, console errors, SEO
+├── locators/
+│   └── LocatorManager.js          ← get() / resolve() / preferred() / has() over a locators file
 │
-├── Pages/                     ← Page Object Model
-│   ├── Homepage.js
-│   ├── PLPPage.js
-│   ├── PDPPage.js
-│   ├── CartPage.js
-│   ├── CheckoutPage.js
-│   └── components/
-│       └── Navbar.js
+├── elements/                      ← business elements shared by 2+ page objects
+│   ├── AddToCartElement.js        ← click + wait for /cart/add.js response
+│   ├── CartBadgeElement.js
+│   ├── MobileMenuElement.js
+│   └── ProductCardElement.js
+│
+├── core/                          ← Page Objects, one folder per feature
+│   ├── homepage/HomePage.js
+│   ├── navigation/Navbar.js
+│   ├── plp/PLPPage.js
+│   ├── pdp/PDPPage.js
+│   ├── cart/CartPage.js
+│   ├── checkout/CheckoutPage.js
+│   └── discount/  subscription/  visual/   ← feature stubs (index.js)
 │
 ├── fixtures/
-│   └── base.js                ← Custom test.extend() fixtures
+│   └── base.js                    ← test.extend(): merchant, homepage, navbar, plp, pdp,
+│                                     cart, checkout, withProduct, atCheckout, evidenceCapture (auto)
+│
+├── tests/                         ← specs (import { test, expect } from ../fixtures/base)
+│   ├── homepage / navigation / plp / pdp / cart / checkout .spec.js
+│   ├── technical.spec.js          ← broken images, console/network errors, SEO
+│   ├── visual.spec.js             ← screenshot regression
+│   └── visual.spec.js-snapshots/  ← committed baseline PNGs (per merchant × project × OS)
 │
 ├── utils/
-│   ├── console.js             ← Console error capture
-│   ├── network.js             ← Network failure capture
-│   ├── screenshots.js         ← Screenshot helpers
-│   ├── test-data.js           ← Shared test data
-│   └── evidence.js            ← Failure evidence assembler
+│   ├── console.js                 ← captureConsoleErrors(page)
+│   ├── network.js                 ← captureNetworkFailures(page) (ignores analytics noise)
+│   ├── screenshots.js             ← named screenshot helper → reports/screenshots/
+│   ├── evidence.js                ← build/save/load failure evidence → reports/evidence/
+│   └── test-data.js               ← shared search queries, test address, thresholds
 │
 ├── ai/
-│   ├── analyze-failure.js     ← Claude API → RCA JSON
-│   ├── classify-severity.js   ← Severity helpers
-│   └── generate-report.js     ← Consolidated QA report
+│   ├── analyze-failure.js         ← evidence → Claude → reports/rca/*.json
+│   ├── classify-severity.js       ← P0–P3 + category maps, grouping helpers
+│   └── generate-report.js         ← results.json + rca → reports/qa-report.{json,md}
 │
-├── notifications/
-│   └── slack.js               ← Slack webhook posting
-│
-├── reports/                   ← Generated at runtime (git-ignored)
-│
-├── .github/workflows/
-│   └── regression.yml         ← GitHub Actions CI
-│
+├── notifications/slack.js         ← Slack Block Kit summary (capped for Slack limits)
+├── scripts/run-project.js         ← resolves `<MERCHANT>-desktop-chromium` etc. for npm scripts
+├── qa-report.js                   ← local one-command pipeline (tests → RCA → report → Slack)
+├── slack-bot/                     ← Cloudflare Worker for the `/qc` slash command
+├── .claude/commands/              ← /investigate-failure (read-only live diagnosis via Playwright MCP)
+├── .mcp.json                      ← Playwright MCP server config
+├── .github/workflows/regression.yml
 ├── playwright.config.js
-├── package.json
-├── CLAUDE.md                  ← QA governance rules
-└── .env.example               ← Environment variable template
+├── reports/                       ← generated at runtime (git-ignored)
+├── CLAUDE.md                      ← QA governance + architecture rules
+└── .env.example
 ```
 
-## Quick Start
+## Quick start
 
 ### 1. Prerequisites
-- Node.js LTS (v20+)
-- Git
-- Claude API key (Anthropic Console)
-- Slack webhook URL (optional)
+- Node.js 20+ and Git
+- Claude API key (optional — without it, RCA falls back to a clearly-marked mock)
+- Slack incoming-webhook URL (optional)
 
 ### 2. Install
 ```bash
-git clone <repo-url> suntek-ai-qc
-cd suntek-ai-qc
+git clone https://github.com/swatis-arch/qc-automation.git
+cd qc-automation
 npm install
 npx playwright install chromium
 ```
 
 ### 3. Configure
 ```bash
-cp .env.example .env
-# Edit .env with your BASE_URL and API keys
+cp .env.example .env     # Windows PowerShell: copy .env.example .env
 ```
 
-### 4. Run Tests
+| Variable | Purpose |
+|----------|---------|
+| `MERCHANT` | Restrict the run to one slug (`outset`, `revitin`, `koh`, `abc`). Blank = all merchants. |
+| `USE_STAGING` | `true` → use each merchant's `urls.staging` instead of `urls.production`. |
+| `CLAUDE_API_KEY` / `CLAUDE_MODEL` | Failure analysis. |
+| `SLACK_WEBHOOK_URL` | Report notification. |
+
+There is no global `BASE_URL` — every merchant carries its own URLs in `merchants/<slug>/config.js`.
+
+### 4. Run tests
 ```bash
-# Full regression (desktop + mobile)
-npm test
-
-# Smoke tests only (fast — ~5 min)
-npm run test:smoke
-
-# Desktop only
-npm run test:desktop
-
-# Mobile only
-npm run test:mobile
-
-# Headed mode for debugging
-npm run test:headed
-
-# Open Playwright UI
-npm run test:ui
-
-# View HTML report
-npm run test:report
+npm test                    # everything: all ACTIVE merchants × desktop + mobile
+npm run test:smoke          # @smoke-tagged tests, desktop, for $MERCHANT (default outset)
+npm run test:desktop        # desktop project only
+npm run test:mobile         # mobile project only
+npm run test:headed         # desktop, headed
+npm run test:visual         # visual spec, desktop
+npm run test:visual:update  # regenerate visual baselines
+npm run test:technical      # technical spec, desktop
+npm run test:ui             # Playwright UI mode
+npm run test:report         # open reports/html
 ```
 
-### 5. AI Analysis
+The `desktop` / `mobile` / `smoke` / `visual` / `technical` scripts go through
+`scripts/run-project.js`, which builds the project name `<MERCHANT>-desktop-chromium`
+(or `-mobile-chrome`) from `MERCHANT` (default `outset`). To target one project directly:
+
 ```bash
-# Analyze failed test results (requires CLAUDE_API_KEY)
-npm run analyze:failures
-
-# Generate consolidated QA report
-npm run generate:report
-
-# Send Slack notification
-npm run notify:slack
+npx playwright test --project=koh-desktop-chromium tests/pdp.spec.js
 ```
 
-## Merchant Configuration
+### 5. Reports + AI analysis
+```bash
+npm run analyze:failures    # reports/evidence/*.json → Claude → reports/rca/*.json
+npm run generate:report     # → reports/qa-report.json + qa-report.md
+npm run notify:slack        # post to Slack (add -- --dry-run to print instead)
+npm run qa:report           # all four steps in one go; extra args go to `playwright test`
+```
 
-Each merchant lives in `merchants/<slug>/config.js`. To onboard a new merchant:
+`npm run qa:report -- --dry-run tests/checkout.spec.js` is the quickest end-to-end check.
 
-1. Copy `merchants/the-outset/config.js` to `merchants/<new-slug>/config.js`
-2. Update all URLs, page paths, feature flags, and integrations
-3. Set `BASE_URL=https://staging.newmerchant.com` in `.env`
-4. Set `MERCHANT=new-slug` in `.env`
-5. Run the smoke suite against staging to verify
+## Merchants
 
-## Test Types
+| Slug | Site | Subscriptions | Reviews |
+|------|------|---------------|---------|
+| `outset` | theoutset.com | — | Okendo |
+| `revitin` | revitin.com | Recharge | Judge.me |
+| `koh` | kreaturesofhabit.com | Skio | Junip |
+| `abc` | abchome.com | — | Yotpo |
+
+Some specs are merchant-gated with `test.skip(...)` (e.g. the Skincare/About Us mega-menu
+tests only run for `outset`; search tests skip when `features.search` is false).
+
+### Onboarding a new merchant
+1. Copy an existing folder: `merchants/outset/` → `merchants/<slug>/`.
+2. Edit `config.js` (URLs, `pages`, `products.default/secondary`, `features`, `integrations`, `navLinks`). `config.slug` must equal the folder name.
+3. Edit `locators.js` with selectors verified against the live site.
+4. Add `'<slug>'` to `ACTIVE_MERCHANTS` in `merchants/index.js`.
+5. `npx playwright test --list` — you should see `<slug>-desktop-chromium` and `<slug>-mobile-chrome`.
+6. Add the slug to `VALID_MERCHANTS` in `slack-bot/src/index.js` and redeploy the Worker (**currently only `outset` is listed there**).
+7. Run the smoke suite: `MERCHANT=<slug> npm run test:smoke`.
+
+`fixtures/base.js` and `playwright.config.js` need no changes.
+
+## Where to change things (refactoring map)
+
+| I want to… | Edit |
+|-----------|------|
+| Fix a selector for one merchant | `merchants/<slug>/locators.js` |
+| Change how a page is driven (all merchants) | `core/<feature>/*Page.js` |
+| Share an interaction between page objects | `elements/` |
+| Add a test | `tests/<area>.spec.js` (use fixtures; tag `@smoke` for the fast suite) |
+| Add/rename a fixture | `fixtures/base.js` |
+| Change retries / timeouts / reporters / projects | `playwright.config.js` |
+| Change the Claude prompt or output shape | `ai/analyze-failure.js` (then check `classify-severity.js` + `generate-report.js`) |
+| Change the Slack message | `notifications/slack.js` |
+| Change CI triggers/suites | `.github/workflows/regression.yml` |
+
+Layering rules (locators → elements → page objects → specs) are in [CLAUDE.md](./CLAUDE.md#architecture-locators--business-elements).
+
+## Test configuration notes
+
+- **Sequential by design:** `workers: 1`, `fullyParallel: false`. Cart tests mutate shared browser storage; parallel specs corrupt cart counts.
+- **Retries:** 1 locally, 2 in CI. Failure evidence is written only on the *final* attempt, so flaky-then-passing tests aren't reported as failures.
+- **Third-party noise:** `setupPage()` in `fixtures/base.js` blocks Klaviyo, OneTrust, cookielaw, Usercentrics and CookieHub.
+- **No purchases:** checkout tests stop at the Shopify checkout URL; add-to-cart tests assert the `/cart/add.js` response only.
+- **Artifacts:** `test-results/artifacts/` (screenshots/video/trace), `reports/html/`, `reports/results.json`, `reports/evidence/`, `reports/rca/`, `reports/qa-report.*`.
+
+## Test types
 
 | Type | Description | Run on |
 |------|-------------|--------|
-| Universal (Type A) | Core commerce flows | Every merchant |
-| Feature-based (Type B) | Subscription, reviews, search | When feature enabled |
-| Merchant-specific (Type C) | Custom business rules | Specific merchants |
+| Universal (A) | Core commerce flows | Every merchant |
+| Feature-based (B) | Subscription, reviews, search | When the feature flag is on |
+| Merchant-specific (C) | Custom business rules | Specific merchants (`test.skip` on slug) |
 
 ## CI/CD
 
-The GitHub Actions workflow (`.github/workflows/regression.yml`) runs:
-- **Daily at 2 AM UTC** — full regression (all tests)
-- **Manual trigger** — `workflow_dispatch` with suite selector
+`.github/workflows/regression.yml`:
 
-Required GitHub Secrets:
-- `BASE_URL` — merchant staging URL
-- `CLAUDE_API_KEY` — Anthropic API key
-- `SLACK_WEBHOOK_URL` — Slack incoming webhook
+| Trigger | Suite | Scope |
+|---------|-------|-------|
+| Schedule, daily 02:00 UTC | Full regression (desktop + mobile) → Claude RCA → report → Slack | **All** `ACTIVE_MERCHANTS` |
+| `workflow_dispatch` `suite=regression` | Same as above | `merchant` input, or all if blank |
+| `workflow_dispatch` `suite=smoke` | `@smoke`, desktop | `merchant` input (default `outset`) |
+| `workflow_dispatch` `suite=visual` | `tests/visual.spec.js`, desktop | `merchant` input (default `outset`) |
+| `workflow_dispatch` `suite=technical` | `tests/technical.spec.js`, desktop | `merchant` input (default `outset`) |
 
-## Severity Reference
+Only the regression job runs the AI/report/Slack steps. There is no `pull_request` trigger.
+
+GitHub Secrets used: `CLAUDE_API_KEY`, `SLACK_WEBHOOK_URL`. (The workflow also passes `BASE_URL`,
+but the Playwright config ignores it — URLs come from merchant configs.)
+
+## Severity reference
 
 | Severity | Description |
 |----------|-------------|
@@ -188,6 +252,4 @@ Required GitHub Secrets:
 
 ## Governance
 
-See [CLAUDE.md](./CLAUDE.md) for full QA governance rules.
-
-**Core principle**: Playwright determines what happened. Claude interprets why it probably happened. QA makes the final decision.
+See [CLAUDE.md](./CLAUDE.md). **Core principle:** Playwright determines what happened. Claude interprets why it probably happened. QA makes the final decision.

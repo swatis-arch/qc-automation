@@ -1,10 +1,35 @@
 # Suntek AI QC Rules
 
 This repository contains automated QA/QC regression tests for Suntek Shopify ecommerce clients.
+See [README.md](./README.md) for setup, commands, and CI.
 
 ## Core Principle
 
 **Playwright determines PASS/FAIL. Claude interprets WHY it probably failed. QA makes the final decision.**
+
+---
+
+## Repo Map (read this first)
+
+| Path | What lives there | Rule of thumb |
+|------|------------------|---------------|
+| `merchants/index.js` | `ACTIVE_MERCHANTS` registry, `loadConfig(slug)`, `MERCHANT` env filter | Only file that decides which merchants run |
+| `merchants/<slug>/config.js` | URLs, `pages`, `products`, `features`, `integrations`, `navLinks` | Data only. `config.slug` must equal the folder name |
+| `merchants/<slug>/locators.js` | Raw selector strings | Data only — no logic |
+| `locators/LocatorManager.js` | `get` / `resolve` / `preferred` / `has` | Sole reader of locators files |
+| `elements/` | Business elements shared by 2+ page objects | See Architecture below |
+| `core/<feature>/` | Page objects (`HomePage`, `Navbar`, `PLPPage`, `PDPPage`, `CartPage`, `CheckoutPage`) | Public API the specs call. `discount/`, `subscription/`, `visual/` are empty placeholders |
+| `fixtures/base.js` | `test.extend()` fixtures; specs import `{ test, expect }` from here, never from `@playwright/test` | Fixtures are merchant-agnostic |
+| `tests/*.spec.js` | Specs. `@smoke` in the title puts a test in the fast suite | No merchant-specific data inline |
+| `utils/` | console/network capture, screenshots, failure evidence, shared test data | Evidence is written to `reports/evidence/` |
+| `ai/` | Claude RCA (`analyze-failure.js`), severity maps, report generator | Advisory only — see AI Layer Rules |
+| `notifications/slack.js` | Slack report | |
+| `slack-bot/` | Cloudflare Worker for the `/qc` slash command (own `package.json`) | Keep `VALID_MERCHANTS` in sync with `ACTIVE_MERCHANTS` |
+| `scripts/run-project.js`, `qa-report.js` | npm-script helpers | |
+| `reports/`, `test-results/` | Generated, git-ignored | Never edit or commit |
+
+Data flow on failure: `evidenceCapture` fixture → `reports/evidence/*.json` → `ai/analyze-failure.js` →
+`reports/rca/*.json` → `ai/generate-report.js` → `reports/qa-report.{json,md}` → `notifications/slack.js`.
 
 ---
 
@@ -83,6 +108,9 @@ Every identified failure must eventually be classified as one of:
 ## Merchant Onboarding Checklist
 - [ ] Create `merchants/<client-slug>/config.js`
 - [ ] Create `merchants/<client-slug>/locators.js` with the site's verified selectors
+- [ ] Add `'<client-slug>'` to `ACTIVE_MERCHANTS` in `merchants/index.js`
+- [ ] Add `'<client-slug>'` to `VALID_MERCHANTS` in `slack-bot/src/index.js` and redeploy the Worker
+- [ ] Run `npx playwright test --list` and confirm `<slug>-desktop-chromium` / `<slug>-mobile-chrome` appear
 - [ ] Verify staging URL is accessible
 - [ ] Confirm representative product URL
 - [ ] Confirm representative collection URL
@@ -98,3 +126,21 @@ Every identified failure must eventually be classified as one of:
 - **LocatorManager** (`locators/LocatorManager.js`) is the only thing that reads a locators file. Page objects and business elements call `merchant.locators.get('key')` (throws if missing) or `merchant.locators.resolve('key', fallbackChain)` (merchant selector + generic fallback) — never `require()` a locators file directly.
 - **Business elements** (`elements/`) wrap a locator + interaction that's shared by more than one page object (e.g. `MobileMenuElement`, `ProductCardElement`, `CartBadgeElement`, `AddToCartElement`). If a locator/interaction is only ever used from one page object, it stays inline in that page object — don't create an element for it just for the sake of the pattern.
 - **Page objects** (`core/*/*.js`) compose locators and business elements into the page's public API (the methods/getters specs call). Specs never touch `merchant.locators` or `elements/` directly except in the few cases already established in `tests/*.spec.js` (e.g. asserting a raw locator's visibility).
+
+### Which LocatorManager method to use
+| Method | Returns | Use when |
+|--------|---------|----------|
+| `get(key)` | Merchant selector, **throws** if missing | Every merchant must define it |
+| `resolve(key, fallback)` | Merchant selector `, ` fallback chain (both match) | Optional, theme-variable; both are safe to match together |
+| `preferred(key, fallback)` | Merchant selector if defined, else fallback — never both | The merchant selector deliberately excludes a decoy (e.g. Outset's `addToCartBtn` excludes the sticky `nav.product-form-bar` duplicate) |
+| `has(key)` | boolean | Conditional logic |
+
+### Fixtures & merchants
+- Specs get the active merchant from the `merchant` fixture, which reads `use.merchantSlug` set per project in `playwright.config.js`. Don't `require()` a merchant config directly in a spec.
+- Merchant-only tests are gated with `test.skip(merchant.slug !== '<slug>', reason)`; feature-only tests with `test.skip(!merchant.features.<flag>, reason)`. Don't fork specs per merchant.
+- The auto `evidenceCapture` fixture writes failure evidence only on the final retry. Don't call `saveEvidenceFile` from specs.
+
+### Test execution constraints
+- `workers: 1` and `fullyParallel: false` are intentional — cart tests share browser storage. Don't raise them without isolating cart state.
+- Checkout tests must stop at the Shopify checkout URL. No order placement, ever.
+- Visual baselines live in `tests/visual.spec.js-snapshots/` (named per merchant/project/OS). Update them with `npm run test:visual:update` only after confirming the visual change is intentional, and review the PNG diff in the PR.
