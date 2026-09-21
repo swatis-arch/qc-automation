@@ -7,6 +7,8 @@
  * instead of each re-declaring the same locator chains.
  */
 
+const LocatorManager = require('../locators/LocatorManager');
+
 class ProductCardElement {
 
     /**
@@ -55,7 +57,7 @@ class ProductCardElement {
      * @param {import('@playwright/test').Locator} [card] - defaults to the first card
      */
     price(card = this.first) {
-        return card.locator('.price, [class*="price"]').first();
+        return card.locator(LocatorManager.PRICE_FALLBACK).first();
     }
 
     /** Wait for at least one card to appear. */

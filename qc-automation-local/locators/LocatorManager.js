@@ -28,6 +28,9 @@
 
 class LocatorManager {
 
+    /** Cross-theme fallback for a price element inside a card / cart line. */
+    static PRICE_FALLBACK = '.price, [class*="price"]';
+
     /**
      * @param {string} merchantSlug
      * @param {object} rawLocators - the object exported by merchants/<slug>/locators.js

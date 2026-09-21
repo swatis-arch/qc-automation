@@ -55,7 +55,7 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
     test('@smoke NAV001 — Skincare mega-menu opens on hover', async ({ navbar, page, merchant }) => {
         test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
         await navbar.hoverSkincare();
-        const submenu = page.locator('.menu-item__submenu').first();
+        const submenu = navbar.megaMenu.first();
         await expect(submenu).toBeVisible({ timeout: 5_000 });
     });
 
@@ -75,7 +75,7 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
         test(`NAV001 — Skincare submenu → "${label}" collection loads`, async ({ navbar, page, merchant }) => {
             test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
             await navbar.hoverSkincare();
-            const link = page.locator(`.menu-item__submenu a[href="${href}"]`).first();
+            const link = navbar.megaMenu.locator(`a[href="${href}"]`).first();
             await link.waitFor({ state: 'visible', timeout: 5_000 });
             await link.click();
             await expect(page).toHaveURL(pattern, { timeout: 15_000 });
@@ -88,7 +88,7 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
     test('@smoke NAV001 — About Us mega-menu opens on hover', async ({ navbar, page, merchant }) => {
         test.skip(merchant.slug !== 'outset', 'About Us mega-menu is Outset-specific content');
         await navbar.hoverAboutUs();
-        const submenu = page.locator('.menu-item__submenu.is-expanded');
+        const submenu = page.locator(`${merchant.locators.get('megaMenu')}.is-expanded`);
         await expect(submenu.locator('a[href="/pages/hyaluroset-complex"]').first()).toBeVisible({ timeout: 5_000 });
     });
 

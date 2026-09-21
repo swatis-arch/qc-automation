@@ -28,4 +28,14 @@ async function expectPageFound(page) {
     ).toHaveCount(0);
 }
 
-module.exports = { expectPageFound, NOT_FOUND };
+/** Content of <meta name="description">, or null. */
+function getMetaDescription(page) {
+    return page.locator('meta[name="description"]').getAttribute('content');
+}
+
+/** Locator for <link rel="canonical">. */
+function canonicalLink(page) {
+    return page.locator('link[rel="canonical"]');
+}
+
+module.exports = { expectPageFound, getMetaDescription, canonicalLink, NOT_FOUND };

@@ -12,6 +12,7 @@
 const { test, expect }           = require('../fixtures/base');
 const { captureConsoleErrors }   = require('../utils/console');
 const { captureNetworkFailures } = require('../utils/network');
+const { getMetaDescription, canonicalLink } = require('../utils/page-checks');
 
 test.describe('SUNTEK QC — Technical Quality', () => {
 
@@ -123,13 +124,13 @@ test.describe('SUNTEK QC — Technical Quality', () => {
 
         test(`Technical — ${name} has a meta description`, async ({ page, merchant }) => {
             await page.goto(pathOf(merchant), { waitUntil: 'domcontentloaded' });
-            const desc = await page.locator('meta[name="description"]').getAttribute('content');
+            const desc = await getMetaDescription(page);
             expect(desc && desc.trim().length > 0).toBe(true);
         });
 
         test(`Technical — ${name} has a canonical tag`, async ({ page, merchant }) => {
             await page.goto(pathOf(merchant), { waitUntil: 'domcontentloaded' });
-            const canonical = page.locator('link[rel="canonical"]');
+            const canonical = canonicalLink(page);
             expect(await canonical.count()).toBeGreaterThan(0);
             expect(await canonical.first().getAttribute('href')).toBeTruthy();
         });

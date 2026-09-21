@@ -122,7 +122,7 @@ class CartPage {
 
     /** Price of the first cart item */
     get firstItemPrice() {
-        return this.firstItem.locator('.price, [class*="price"]').first();
+        return this.firstItem.locator(LocatorManager.PRICE_FALLBACK).first();
     }
 
     // -- Quantity ---------------------------------------------------------------

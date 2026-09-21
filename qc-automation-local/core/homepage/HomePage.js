@@ -12,6 +12,7 @@
  */
 
 const { dismissPopups } = require('../../utils/popups');
+const { getMetaDescription, canonicalLink } = require('../../utils/page-checks');
 const MobileMenuElement  = require('../../elements/MobileMenuElement');
 const ProductCardElement = require('../../elements/ProductCardElement');
 const CartBadgeElement   = require('../../elements/CartBadgeElement');
@@ -170,7 +171,7 @@ class HomePage {
      * @returns {Promise<string|null>}
      */
     async getMetaDescription() {
-        return this.page.locator('meta[name="description"]').getAttribute('content');
+        return getMetaDescription(this.page);
     }
 
     /**
@@ -178,7 +179,7 @@ class HomePage {
      * @returns {Promise<string|null>}
      */
     async getCanonicalUrl() {
-        return this.page.locator('link[rel="canonical"]').first().getAttribute('href');
+        return canonicalLink(this.page).first().getAttribute('href');
     }
 }
 

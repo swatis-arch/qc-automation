@@ -56,6 +56,11 @@ class Navbar {
 
     // -- Mega-menus -------------------------------------------------------------
 
+    /** The open mega-menu panel (locator key `megaMenu`, defined per merchant) */
+    get megaMenu() {
+        return this.page.locator(this.locators.get('megaMenu'));
+    }
+
     /** Hover over the Skincare nav item to open its mega-menu */
     async hoverSkincare() {
         const skincareLink = this.page.locator('nav a[href*="skincare"], .nav__item:has-text("Skincare")').first();
@@ -75,7 +80,7 @@ class Navbar {
      */
     async verifySkincareSubmenu() {
         await this.hoverSkincare();
-        const submenu = this.page.locator('.menu-item__submenu').first();
+        const submenu = this.megaMenu.first();
         await submenu.waitFor({ state: 'visible', timeout: 5_000 });
 
         const expectedLinks = [

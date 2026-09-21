@@ -42,4 +42,6 @@ module.exports = {
     // Item title link: drawer = h3.product-title a, cart page = h4.cart-item__details__heading a.
     cartItemTitle:  '.product-title a, .cart-item__details__heading a',
     quickAddBtn:    'button.quick-add-to-cart__button',
+    // Skincare / About Us mega-menu panel (Outset-only content).
+    megaMenu:       '.menu-item__submenu',
 };

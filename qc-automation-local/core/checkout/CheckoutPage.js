@@ -8,6 +8,8 @@
  * point where payment would be entered.
  */
 
+const { expectPageFound } = require('../../utils/page-checks');
+
 class CheckoutPage {
 
     /**
@@ -112,12 +114,7 @@ class CheckoutPage {
      * Verify that checkout loaded without a 404 or error page.
      */
     async verifyNoError() {
-        // Judge by title/headline, not body text: "404" also appears in prices and totals.
-        const title    = await this.page.title();
-        const headings = await this.page.locator('h1').filter({ hasText: /404|page not found|not found/i }).count();
-        if (/404|not found/i.test(title) || headings > 0) {
-            throw new Error('Checkout page returned a 404 or error.');
-        }
+        await expectPageFound(this.page);
     }
 }
 
