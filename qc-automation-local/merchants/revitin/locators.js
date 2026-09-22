@@ -12,12 +12,19 @@ module.exports = {
     logo:           'header a[href="/"]',   // Logo is an inline SVG, not an <img>, on this theme
     promoBar:       '[class*="announcement"]',
     hero:           '.easylockdown-content > .shopify-section:first-child',   // No "hero" class on this theme — first section on the page
-    productCard:    'main a[href*="/products/"]',
+    // Re-verified 2026-09-22: a bare `a[href*="/products/"]` also matches the header/footer/hero CTA
+    // links and the flavor-picker slider's thumbnails (same one SKU, different flavor/size query
+    // params) — none of which are a shoppable card. Requiring a price element keeps only genuine
+    // product tiles, which correctly leaves this at zero on Revitin: there is no priced product-card
+    // grid anywhere on the site (see config.js's single-product-catalog note) — code that checks
+    // `productCard.count() === 0` skips accordingly, matching that reality instead of matching noise.
+    productCard:    'main a[href*="/products/"]:has([class*="price"])',
     cartBadge:      '[class*="cart-count"]',
     miniCartDrawer: '.cart-drawer, [class*="cart-drawer"], [class*="mini-cart"]',
     mobileMenu:     '.mobile-menu',
     hamburger:      '#hamburger-icon, button[aria-label*="menu" i], [class*="hamburger"]',
     searchButton:   'button[aria-label*="search" i]',
+    cartIcon:       '#cart-icon-bubble',
     searchForm:     'form[action="/search"]',
     addToCartBtn:   'button[name="add"], .main__atc__button, .ts-add-to-bag-btn',
     // The PDP has no <h1> (re-verified 2026-09-20): the product name is an <h3> and the price a span.

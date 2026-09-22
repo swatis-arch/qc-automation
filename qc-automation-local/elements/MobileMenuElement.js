@@ -69,6 +69,45 @@ class MobileMenuElement {
         }
         await this.menu.waitFor({ state: 'hidden', timeout: 10_000 });
     }
+
+    /**
+     * Whether the page behind the menu is scroll-locked (html/body overflow: hidden).
+     * Compare before opening and after closing to check the menu gives scrolling back
+     * (some pages, like ABC's full-page hero slideshow, are always locked).
+     */
+    isPageScrollLocked() {
+        // `body` can momentarily be absent right after the close animation swaps content
+        // in some themes — filter to real elements before calling getComputedStyle on them.
+        return this.page.evaluate(() => [document.documentElement, document.body]
+            .filter(el => el instanceof Element)
+            .some(el => getComputedStyle(el).overflowY === 'hidden'));
+    }
+
+    /**
+     * Scroll the open menu to its end and report whether every item was reachable.
+     * `scrollable` is false when the menu fits on screen (nothing to scroll).
+     *
+     * @returns {Promise<{ scrollable: boolean, lastLinkInView: boolean, pageScrolled: boolean }>}
+     */
+    scrollToEnd() {
+        return this.menu.first().evaluate(async menu => {
+            const scroller = [menu, ...menu.querySelectorAll('*')].find(el =>
+                el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(el).overflowY));
+            if (!scroller) return { scrollable: false, lastLinkInView: true, pageScrolled: false };
+
+            const pageYBefore = window.scrollY;
+            scroller.scrollTop = scroller.scrollHeight;
+            await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+            const links = [...menu.querySelectorAll('a[href]')].filter(a => a.getBoundingClientRect().height > 0);
+            const last  = links[links.length - 1]?.getBoundingClientRect();
+            return {
+                scrollable:     true,
+                lastLinkInView: !!last && last.top >= 0 && last.bottom <= window.innerHeight + 1,
+                pageScrolled:   window.scrollY !== pageYBefore,
+            };
+        });
+    }
 }
 
 module.exports = MobileMenuElement;

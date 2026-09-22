@@ -66,6 +66,7 @@ module.exports = {
         rewards:         true,
         giftWrapping:    false,
         gwp:             true,    // "Save 41% + Free Gift" on subscription
+        stickyHeader:    false,
     },
 
     // -- Third-party integrations ------------------------------------------------

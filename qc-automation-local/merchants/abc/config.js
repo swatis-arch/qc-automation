@@ -54,6 +54,7 @@ module.exports = {
         rewards:         false,
         giftWrapping:    false,
         gwp:             false,
+        stickyHeader:    false,
     },
 
     // -- Third-party integrations ------------------------------------------------

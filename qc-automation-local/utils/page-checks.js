@@ -28,9 +28,9 @@ async function expectPageFound(page) {
     ).toHaveCount(0);
 }
 
-/** Content of <meta name="description">, or null. */
+/** Content of the first <meta name="description">, or null. */
 function getMetaDescription(page) {
-    return page.locator('meta[name="description"]').getAttribute('content');
+    return page.locator('meta[name="description"]').first().getAttribute('content');
 }
 
 /** Locator for <link rel="canonical">. */
@@ -38,4 +38,27 @@ function canonicalLink(page) {
     return page.locator('link[rel="canonical"]');
 }
 
-module.exports = { expectPageFound, getMetaDescription, canonicalLink, NOT_FOUND };
+/**
+ * How many px the page is wider than the viewport (0 = no horizontal scroll).
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<number>}
+ */
+function horizontalOverflow(page) {
+    return page.evaluate(() => {
+        const root = document.documentElement;
+        return Math.max(0, root.scrollWidth - root.clientWidth);
+    });
+}
+
+/**
+ * Numeric value of a price string ("$1,105.00" -> 1105). NaN when there is none.
+ * Reads the FIRST number, so "$105 $122" (price + compare-at) gives 105.
+ * @param {string} text
+ * @returns {number}
+ */
+function parseMoney(text) {
+    const match = String(text).replace(/,/g, '').match(/\d+(\.\d+)?/);
+    return match ? parseFloat(match[0]) : NaN;
+}
+
+module.exports = { expectPageFound, getMetaDescription, canonicalLink, horizontalOverflow, parseMoney, NOT_FOUND };

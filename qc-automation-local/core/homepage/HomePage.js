@@ -13,6 +13,9 @@
 
 const { dismissPopups } = require('../../utils/popups');
 const { getMetaDescription, canonicalLink } = require('../../utils/page-checks');
+const { collectLinks, internalPageUrls }    = require('../../utils/link-check');
+const AnnouncementBar    = require('./AnnouncementBar');
+const Footer             = require('./Footer');
 const MobileMenuElement  = require('../../elements/MobileMenuElement');
 const ProductCardElement = require('../../elements/ProductCardElement');
 const CartBadgeElement   = require('../../elements/CartBadgeElement');
@@ -29,6 +32,9 @@ class HomePage {
         this.productCard = new ProductCardElement(page, this.locators);
         this.cartBadgeEl = new CartBadgeElement(page, this.locators);
         this.addToCartEl = new AddToCartElement(page);
+
+        this.announcement = new AnnouncementBar(page, this.locators);
+        this.footer       = new Footer(page, this.locators);
     }
 
     // -- Navigation -------------------------------------------------------------
@@ -56,6 +62,18 @@ class HomePage {
     /** Returns the logo image locator */
     get logo() {
         return this.page.locator(this.locators.get('logo')).filter({ visible: true }).first();
+    }
+
+    /** Account icon / link in the header (first visible one — themes duplicate it for mobile) */
+    get accountLink() {
+        const fallback = 'a[href*="/account"]:not([href*="logout"])';
+        return this.page.locator(this.locators.preferred('accountLink', fallback)).filter({ visible: true }).first();
+    }
+
+    /** Cart icon / button in the header that opens the cart drawer or page */
+    get cartIcon() {
+        const fallback = 'a[href="/cart"], button[aria-label*="cart" i]';
+        return this.page.locator(this.locators.preferred('cartIcon', fallback)).filter({ visible: true }).first();
     }
 
     // -- Promo bar --------------------------------------------------------------
@@ -131,21 +149,45 @@ class HomePage {
     // -- Search -----------------------------------------------------------------
 
     /**
-     * Click the search icon, type a query, and submit.
-     * @param {string} query
+     * Click the search icon and return the (now visible) search input.
+     * @returns {Promise<import('@playwright/test').Locator>}
      */
-    async searchFor(query) {
+    async openSearch() {
         const searchBtn = this.page.locator(this.locators.get('searchButton')).first();
         await searchBtn.waitFor({ state: 'visible', timeout: 10_000 });
         await searchBtn.click({ force: true });
 
         const searchInput = this.page.locator(
             'input[name="q"], input[type="search"], .nav__search-input'
-        ).first();
+        ).filter({ visible: true }).first();
         await searchInput.waitFor({ state: 'visible', timeout: 5_000 });
+        return searchInput;
+    }
+
+    /**
+     * Click the search icon, type a query, and submit.
+     * @param {string} query
+     */
+    async searchFor(query) {
+        const searchInput = await this.openSearch();
         await searchInput.fill(query);
         await searchInput.press('Enter');
         await this.page.waitForLoadState('domcontentloaded');
+    }
+
+    /**
+     * Open search and type a term key by key (what triggers predictive search),
+     * without submitting.
+     * @param {string} term
+     */
+    async typeSearchTerm(term) {
+        const searchInput = await this.openSearch();
+        await searchInput.pressSequentially(term, { delay: 80 });
+    }
+
+    /** Product suggestions of the predictive-search dropdown (merchant locator `predictiveSearchResults`) */
+    get searchSuggestions() {
+        return this.page.locator(this.locators.get('predictiveSearchResults')).filter({ visible: true });
     }
 
     // -- Mobile menu ------------------------------------------------------------
@@ -162,6 +204,34 @@ class HomePage {
      */
     async closeMobileMenu() {
         await this.mobileMenu.close();
+    }
+
+    // -- Page-wide helpers ------------------------------------------------------
+
+    /**
+     * Scroll from the top to the bottom of the page in viewport-sized steps
+     * (so lazy-loaded content is requested the way a visitor would trigger it),
+     * then back to the top. No-op on pages that don't scroll (e.g. ABC's
+     * full-page hero slideshow).
+     */
+    async scrollThroughPage() {
+        const viewportHeight = this.page.viewportSize().height;
+        for (;;) {
+            const { y, max } = await this.page.evaluate(() => ({
+                y:   window.scrollY,
+                max: document.documentElement.scrollHeight - window.innerHeight,
+            }));
+            if (y >= max) break;
+            await this.page.mouse.wheel(0, viewportHeight * 0.8);
+            await this.page.waitForTimeout(150);   // give the lazy-loader time to react between steps
+        }
+        await this.page.evaluate(() => window.scrollTo(0, 0));
+    }
+
+    /** Unique same-site page URLs linked from anywhere on the homepage */
+    async internalLinkUrls() {
+        const links = await collectLinks(this.page);
+        return internalPageUrls(links, new URL(this.page.url()).hostname);
     }
 
     // -- SEO / Meta -------------------------------------------------------------

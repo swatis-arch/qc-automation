@@ -20,6 +20,7 @@ module.exports = {
     mobileMenu:     '#menu-drawer, .menu-drawer, #navMenuWrapper',
     hamburger:      'summary[aria-label*="menu" i], .header__icon--menu, button[aria-label*="menu" i]',
     searchButton:   'button[aria-label*="search" i], button.nav__search-toggler',
+    cartIcon:       '#cart-icon-bubble',
     searchForm:     'form[action="/search"]',
     addToCartBtn:   'button[name="add"], .pfp__atc, button.product-form__submit',
     productTitle:   'h1',

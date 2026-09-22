@@ -20,10 +20,20 @@ class ProductCardElement {
         this.locators = locators;
     }
 
-    /** All visible product cards */
+    /**
+     * All visible product cards.
+     *
+     * Uses `preferred()`, not `resolve()`: a merchant's own `productCard` class
+     * (e.g. Outset's `.product-card`) is an exact class match, but OR-ing in the
+     * generic `[class*="product-card"]` fallback on top of it also matches the
+     * card's own BEM children (`product-card__price`, `product-card__image-wrapper`,
+     * ...) — the attribute selector matches the substring anywhere in `class`, not
+     * just a whole class token. That turned one real card into several bogus
+     * "cards" sharing its bounding box once a test indexed past `.first()`.
+     */
     get all() {
         return this.page.locator(
-            this.locators.resolve('productCard', '.product-card, .product-item, [class*="product-card"]')
+            this.locators.preferred('productCard', '.product-card, .product-item, [class*="product-card"]')
         ).filter({ visible: true });
     }
 
@@ -45,11 +55,23 @@ class ProductCardElement {
     }
 
     /**
+     * Title text element of a card (visible one — themes duplicate it per breakpoint).
+     * @param {import('@playwright/test').Locator} [card] - defaults to the first card
+     */
+    title(card = this.first) {
+        return card.locator('[class*="title"], h2, h3, h4').filter({ visible: true }).first();
+    }
+
+    /**
      * Image of a card.
+     * Some themes (e.g. Outset's Vue lazy-loader) keep a permanent blank
+     * placeholder (`<img src="">`) in the DOM right next to the real photo —
+     * excluding empty-src images stops `.first()` from landing on the
+     * placeholder instead of the product photo.
      * @param {import('@playwright/test').Locator} [card] - defaults to the first card
      */
     image(card = this.first) {
-        return card.locator('img').first();
+        return card.locator('img:not([src=""])').first();
     }
 
     /**

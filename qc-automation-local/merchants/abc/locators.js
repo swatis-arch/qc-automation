@@ -20,6 +20,11 @@ module.exports = {
     hamburger:      'button.nav__burger, button[aria-label="Open mobile menu"]',
     searchButton:   'button.nav__desktopSearchToggle, button[aria-label*="search" i]',
     searchForm:     'form.customSearch__form, form[action="/search"]',
+    // Searchspring predictive search: product suggestions inside <custom-predictive-search> while typing.
+    predictiveSearchResults: '.customSearch__content a[href*="/products/"]',
+    cartIcon:       'button.quick-cart__trigger',
+    // The first <footer> on the page is the side cart's; the site footer sits in the hero slideshow's last slide.
+    footer:         'footer.footer',
     addToCartBtn:   'button[name="add"], .product-form__cart-submit, .atc-button',
     productTitle:   '.product-metas__title, h1',
     // Re-verified 2026-09-21: price sits in .product-metas__price (span.price-value__current), not Dawn's .product__price.

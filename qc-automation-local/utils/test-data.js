@@ -45,6 +45,15 @@ const PERFORMANCE = {
     maxCLS:            0.1,
 };
 
+// ── SEO Limits ───────────────────────────────────────────────────────────────
+
+// Lengths Shopify's own search-listing preview allows (Online Store > Preferences).
+const SEO_LIMITS = {
+    titleMax:          70,
+    descriptionMin:    50,
+    descriptionMax:    320,
+};
+
 // ── HTTP Status Expectations ─────────────────────────────────────────────────
 
 const HTTP = {
@@ -71,6 +80,7 @@ module.exports = {
     SEARCH_QUERIES,
     TEST_ADDRESS,
     PERFORMANCE,
+    SEO_LIMITS,
     HTTP,
     A11Y_RULES,
 };

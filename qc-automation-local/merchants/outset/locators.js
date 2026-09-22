@@ -27,6 +27,7 @@ module.exports = {
     mobileMenu:     '#navMenuWrapper',
     hamburger:      'button[aria-label="Open Menu"], .nav__menu-open-btn',
     searchButton:   'button[aria-label="Open search bar"], button.nav__search-toggler',
+    cartIcon:       'button.nav__mini-cart-trigger',
     searchForm:     'form[action="/search"]',
     addToCartBtn:   'button.product-form__btn:not(nav.product-form-bar *)',
     productTitle:   'h1[data-tmpl="product"], h1.product-form__title, h1',
