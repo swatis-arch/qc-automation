@@ -10,6 +10,9 @@ playwright-report/
 # reports/evidence/*.json since a single "*" doesn't cross directories.)
 reports/
 
+# Midscene AI trial output (replay reports, cache)
+midscene_run/
+
 # Visual regression baselines update diffs
 **/*-actual.png
 **/*-diff.png

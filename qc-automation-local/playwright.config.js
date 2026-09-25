@@ -128,6 +128,11 @@ module.exports = defineConfig({
         ['html', { open: 'never', outputFolder: 'reports/html' }],
         ['json', { outputFile: 'reports/results.json' }],
         ['list'],
+        // Midscene AI trial: step-by-step replay report in midscene_run/report/.
+        // Only added when a Midscene model is configured (see fixtures/ai.js).
+        ...(process.env.MIDSCENE_MODEL_API_KEY
+            ? [['@midscene/web/playwright-reporter', { type: 'merged' }]]
+            : []),
     ],
 
     // -- Shared settings (no baseURL here -- each project sets its own) -------
