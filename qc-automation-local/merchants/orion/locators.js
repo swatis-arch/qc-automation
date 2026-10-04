@@ -64,7 +64,8 @@ module.exports = {
     // -- Cart drawer -------------------------------------------------------------
     cartDrawer:      'dialog.cart-drawer__dialog[open]',
     cartDrawerClose: 'dialog.cart-drawer__dialog button.close-button',
-    cartItem:        'dialog.cart-drawer__dialog .cart-items__table-row',
+    // tbody only: the first .cart-items__table-row is the visually-hidden <thead> header row.
+    cartItem:        'dialog.cart-drawer__dialog tbody .cart-items__table-row',
     cartItemTitle:   '.cart-items__title',
     cartQuantityInput: 'quantity-selector-component input',
     cartQtyPlus:     'button.quantity-plus',

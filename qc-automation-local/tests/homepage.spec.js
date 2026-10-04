@@ -221,7 +221,8 @@ test.describe('SUNTEK QC — Homepage & Navbar [SITE001, NAV001]', () => {
 
     // ── Navigation (desktop) ───────────────────────────────────────────────────
 
-    test('@smoke NAV001 — All primary desktop nav links are visible', async ({ navbar, page }) => {
+    test('@smoke NAV001 — All primary desktop nav links are visible', async ({ navbar, isMobile }) => {
+        test.skip(isMobile, 'Desktop nav is behind the hamburger on mobile — covered by the mobile menu tests');
         await navbar.verifyAllNavLinksVisible();
     });
 

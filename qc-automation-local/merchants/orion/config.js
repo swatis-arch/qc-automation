@@ -31,7 +31,7 @@ module.exports = {
     pages: {
         homepage:    '/',
         collection:  '/collections/all-telescopes',
-        product:     '/products/orion-eon-80mm-ed-doublet-refractor',
+        product:     '/products/orion-spaceprobe-130st-short-tube-equatorial-reflector-telescope',
         search:      '/search?q=eyepiece',
         cart:        '/cart',
         account:     '/account',
@@ -40,14 +40,14 @@ module.exports = {
     // -- Representative products -------------------------------------------------
     products: {
         default: {
-            handle: 'orion-eon-80mm-ed-doublet-refractor',
-            name:   'EON 80 mm ED Doublet Refractor Telescope',
-            path:   '/products/orion-eon-80mm-ed-doublet-refractor',
+            handle: 'orion-spaceprobe-130st-short-tube-equatorial-reflector-telescope',
+            name:   'SpaceProbe 130ST EQ Reflector Telescope',
+            path:   '/products/orion-spaceprobe-130st-short-tube-equatorial-reflector-telescope',
         },
         secondary: {
-            handle: 'orion-2x-1-25-shorty-barlow-lens-08711',
-            name:   '2x 1.25" Shorty Barlow Lens',
-            path:   '/products/orion-2x-1-25-shorty-barlow-lens-08711',
+            handle: 'orion-spaceprobe-ii-3-eq-reflector-10274',
+            name:   'SpaceProbe II 3" EQ Reflector Telescope',
+            path:   '/products/orion-spaceprobe-ii-3-eq-reflector-10274',
         },
     },
 
@@ -80,6 +80,9 @@ module.exports = {
     checkout: {
         productionPurchaseAllowed: false,
         checkoutType: 'shopify',
+        // Order value from which US shipping is free; 0 = always free ("Free shipping on orders
+        // to the contiguous U.S." on the PDP, "Free Shipping Site-Wide" in the footer).
+        freeShippingThreshold: 0,
     },
 
     // -- Custom test identifiers -------------------------------------------------
