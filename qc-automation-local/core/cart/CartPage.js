@@ -458,6 +458,13 @@ class CartPage {
         ).filter({ visible: true }).first();
     }
 
+    /** Express payment buttons (Shop Pay, PayPal, Google Pay...) Shopify renders beside Checkout. */
+    get expressButtons() {
+        return this.page.locator(
+            'shopify-accelerated-checkout-cart, .additional-checkout-buttons, [data-shopify="payment-button"], .shopify-payment-button'
+        ).filter({ visible: true });
+    }
+
     /**
      * Click the Checkout button and wait for checkout URL.
      * IMPORTANT: Never performs a real production purchase.
