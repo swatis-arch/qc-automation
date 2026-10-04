@@ -125,7 +125,10 @@ module.exports = defineConfig({
     forbidOnly: !!process.env.CI,
 
     // -- Reporters ------------------------------------------------------------
-    reporter: [
+    // `--list` runs nothing, but the json reporter would still overwrite
+    // reports/results.json with every test marked skipped (and the html report
+    // with an empty one), which the RCA/report scripts then read as a real run.
+    reporter: process.argv.includes('--list') ? [['list']] : [
         ['html', { open: 'never', outputFolder: 'reports/html' }],
         ['json', { outputFile: 'reports/results.json' }],
         ['list'],
