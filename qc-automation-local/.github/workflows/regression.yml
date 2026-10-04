@@ -70,6 +70,7 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
           MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
 
       - name: Upload smoke report
@@ -112,6 +113,7 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
           # Empty MERCHANT runs every slug in ACTIVE_MERCHANTS (merchants/index.js).
           # On the nightly schedule there is no `inputs.merchant`, so this must NOT
           # fall back to a single slug or the other merchants would silently never run.
@@ -122,7 +124,7 @@ jobs:
         run: node ai/analyze-failure.js
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          CLAUDE_MODEL:   claude-sonnet-5
+          CLAUDE_MODEL:   claude-sonnet-5-5
           MERCHANT:       ${{ github.event.inputs.merchant }}
         continue-on-error: true    # Non-fatal if Claude is unavailable
 
@@ -190,6 +192,7 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
           MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
 
       - name: Upload visual report + screenshots
@@ -230,6 +233,7 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
           MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
 
       - name: Upload technical report

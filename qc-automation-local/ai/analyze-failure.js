@@ -6,7 +6,7 @@
  * Flow:
  *   failure.json (from utils/evidence.js)
  *       ↓
- *   Claude API (claude-sonnet-5)
+ *   Claude API (claude-sonnet-5-5)
  *       ↓
  *   RCA JSON: { status, severity, category, probableCause, confidence, recommendedAction }
  *
@@ -36,7 +36,7 @@ const { loadAllEvidence } = require('../utils/evidence');
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-const CLAUDE_MODEL   = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
+const CLAUDE_MODEL   = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
 const RCA_DIR = path.join(process.cwd(), 'reports', 'rca');
@@ -135,7 +135,7 @@ async function analyzeFailure(evidence) {
 
     const payload = {
         model:      CLAUDE_MODEL,
-        max_tokens: 1024,
+        max_tokens: 16000,   // thinking tokens count toward this, so leave room for the JSON
         system:     SYSTEM_PROMPT,
         messages: [
             { role: 'user', content: userMessage },
@@ -159,7 +159,9 @@ async function analyzeFailure(evidence) {
         }
 
         const data    = await response.json();
-        const content = data.content?.[0]?.text || '';
+        // Thinking is on by default on current Sonnet models, so content[0] may be a
+        // thinking block — take the text block instead.
+        const content = (data.content || []).find(b => b.type === 'text')?.text || '';
 
         // Parse Claude's JSON response
         try {
