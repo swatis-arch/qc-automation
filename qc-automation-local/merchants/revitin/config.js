@@ -60,6 +60,8 @@ module.exports = {
         giftWrapping:    false,
         gwp:             false,
         stickyHeader:    true,
+        accounts:        true,   // Shopify customer accounts (default storefront route)
+        filters:         false,   // Search & Discovery / app-based collection filters
     },
 
     // -- Third-party integrations ------------------------------------------------

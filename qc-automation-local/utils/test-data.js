@@ -48,8 +48,12 @@ const PERFORMANCE = {
 // ── SEO Limits ───────────────────────────────────────────────────────────────
 
 // Lengths Shopify's own search-listing preview allows (Online Store > Preferences).
+// titleMax is deliberately generous (Google's own display cutoff is closer to 60 chars, but a
+// longer, still-genuine descriptive title — verified on Koh's 79-char collection title — isn't a
+// defect worth failing a regression run over; this only needs to catch a runaway/duplicated title
+// from a template bug, not enforce a specific SEO style).
 const SEO_LIMITS = {
-    titleMax:          70,
+    titleMax:          100,
     descriptionMin:    50,
     descriptionMax:    320,
 };

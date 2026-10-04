@@ -54,46 +54,6 @@ class Navbar {
         await this.page.waitForLoadState('domcontentloaded');
     }
 
-    // -- Mega-menus -------------------------------------------------------------
-
-    /** The open mega-menu panel (locator key `megaMenu`, defined per merchant) */
-    get megaMenu() {
-        return this.page.locator(this.locators.get('megaMenu'));
-    }
-
-    /** Hover over the Skincare nav item to open its mega-menu */
-    async hoverSkincare() {
-        const skincareLink = this.page.locator('nav a[href*="skincare"], .nav__item:has-text("Skincare")').first();
-        await skincareLink.hover();
-        await this.page.waitForTimeout(300); // Allow CSS transition
-    }
-
-    /** Hover over the About Us nav item to open its mega-menu */
-    async hoverAboutUs() {
-        const aboutUsLink = this.page.locator('.nav__item:has-text("About"), nav a:has-text("About Us")').first();
-        await aboutUsLink.hover();
-        await this.page.waitForTimeout(300);
-    }
-
-    /**
-     * Verify the Skincare submenu links are visible.
-     */
-    async verifySkincareSubmenu() {
-        await this.hoverSkincare();
-        const submenu = this.megaMenu.first();
-        await submenu.waitFor({ state: 'visible', timeout: 5_000 });
-
-        const expectedLinks = [
-            '/collections/cleansers-exfoliators',
-            '/collections/moisturizers-masks',
-            '/collections/serums-oils',
-        ];
-
-        for (const href of expectedLinks) {
-            await submenu.locator(`a[href="${href}"]`).first().waitFor({ state: 'visible', timeout: 3_000 });
-        }
-    }
-
     // -- Mobile menu ------------------------------------------------------------
 
     /** Open the mobile hamburger menu */

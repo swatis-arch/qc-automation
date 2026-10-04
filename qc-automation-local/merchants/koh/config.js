@@ -67,6 +67,8 @@ module.exports = {
         giftWrapping:    false,
         gwp:             true,    // "Save 41% + Free Gift" on subscription
         stickyHeader:    false,
+        accounts:        true,   // Shopify customer accounts (default storefront route)
+        filters:         false,   // Search & Discovery / app-based collection filters
     },
 
     // -- Third-party integrations ------------------------------------------------

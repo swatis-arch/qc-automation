@@ -60,6 +60,7 @@ class MobileMenuElement {
             'button[aria-label*="Close navigation" i]',
             'button[aria-label*="close menu" i]',
             '.nav__close-btn',
+            '.menu-drawer__close-button:visible',   // Horizon (Orion)
         ].join(', ')).first();
 
         if (await explicitCloseBtn.count() > 0) {

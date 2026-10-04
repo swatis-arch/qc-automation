@@ -111,6 +111,19 @@ class CheckoutPage {
     }
 
     /**
+     * The subtotal as a number, read from the "Subtotal $x" text of the page (the one-page
+     * checkout's summary has no stable subtotal class). NaN if none is shown.
+     * @returns {Promise<number>}
+     */
+    async getSubtotalAmount() {
+        await this.page.getByText(/^subtotal/i).first().waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
+        const text = (await this.page.locator('body').innerText()).replace(/,/g, '');
+        // "Subtotal · 2 items $63.00": allow a short item count between the label and the amount.
+        const match = text.match(/subtotal[^$£€]{0,40}[$£€]\s?(\d+(?:\.\d+)?)/i);
+        return match ? parseFloat(match[1]) : NaN;
+    }
+
+    /**
      * Verify that checkout loaded without a 404 or error page.
      */
     async verifyNoError() {

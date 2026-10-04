@@ -30,9 +30,23 @@ module.exports = {
     // The PDP has no <h1> (re-verified 2026-09-20): the product name is an <h3> and the price a span.
     productTitle:   'h1, .product-title, h3.main_pdp_size_heading',
     productPrice:   'span.one_time_price',
+    // PDP purchase type (verified 2026-09-24): subscribe is a set of pack-size buttons (Trio /
+    // Family pack, each "Delivered every ..."), one-time is its own heading button.
+    purchaseSubscribe: 'button.variant-price-btn',
+    purchaseOneTime:   'button.one_time_heading',
+    subscriptionFrequency: 'select.frequency-select',
+    accordionToggle: 'button.accordion-button',
     // The cart drawer is div.site-cart (only visible once opened) -- not a .cart-drawer/.mini-cart class.
     cartDrawer:     '.site-cart .cart__container',
+    cartDrawerClose: '.site-cart #close-menu',
     // Cart subtotal is the <p> in .totals; the quantity field is a plain type=number input (no name/class).
     cartSubtotal:   '.totals p',
     cartQuantityInput: 'input[type="number"]',
+    // Cart line controls (verified 2026-09-28): each line is a <cart-item> carrying data-variant-id.
+    cartItem:       '.site-cart cart-item',
+    cartQtyPlus:    'button[name="increment"]',
+    cartQtyMinus:   'button[name="decrement"]',
+    cartItemRemove: 'button.remove-button-js',
+    cartItemPrice:  '.cart-item__totals',
+    cartUpsellAdd:  '.site-cart .cart-upsell-card__add',
 };

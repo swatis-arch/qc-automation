@@ -52,13 +52,32 @@ function horizontalOverflow(page) {
 
 /**
  * Numeric value of a price string ("$1,105.00" -> 1105). NaN when there is none.
- * Reads the FIRST number, so "$105 $122" (price + compare-at) gives 105.
+ *
+ * Takes the SMALLEST number found, not the first: a card/price element showing
+ * both the current and compare-at price puts them in different orders across
+ * themes — current-then-compare ("$105 $122", Outset) and compare-then-current
+ * ("$11,955$8,966", Abc) both appear in this codebase. The compare-at price is
+ * always >= the actual price by definition, so the minimum is always the real
+ * one, and with a single plain price this is just that price.
  * @param {string} text
  * @returns {number}
  */
 function parseMoney(text) {
-    const match = String(text).replace(/,/g, '').match(/\d+(\.\d+)?/);
-    return match ? parseFloat(match[0]) : NaN;
+    const numbers = [...String(text).replace(/,/g, '').matchAll(/\d+(\.\d+)?/g)].map(m => parseFloat(m[0]));
+    return numbers.length ? Math.min(...numbers) : NaN;
 }
 
-module.exports = { expectPageFound, getMetaDescription, canonicalLink, horizontalOverflow, parseMoney, NOT_FOUND };
+/**
+ * Stable identity of a Shopify image URL, so the same file can be matched across its
+ * resized/cropped CDN variants ("x_600x.jpg?v=1" and "//cdn/.../x.jpg" -> "x").
+ * @param {string} src
+ * @returns {string}
+ */
+function imageKey(src) {
+    const file = String(src || '').split('?')[0].split('/').pop();
+    return file.replace(/\.(jpe?g|png|webp|gif|avif)$/i, '')
+        .replace(/_(\d+x\d*|x\d+|small|medium|large|grande|master)(_crop_\w+)?$/i, '')
+        .toLowerCase();
+}
+
+module.exports = { expectPageFound, getMetaDescription, canonicalLink, horizontalOverflow, parseMoney, imageKey, NOT_FOUND };

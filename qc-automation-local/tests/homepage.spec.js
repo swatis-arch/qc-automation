@@ -137,7 +137,8 @@ test.describe('SUNTEK QC — Homepage & Navbar [SITE001, NAV001]', () => {
     });
 
     test('SITE001 — Promo bar active slide contains text', async ({ homepage, page }) => {
-        const slide = homepage.promoBar.locator('.swiper-slide-active, .slide, [class*="message"]').first();
+        // `.announcement-bar__slide[aria-hidden="false"]`: Horizon's announcement slideshow (Orion).
+        const slide = homepage.promoBar.locator('.swiper-slide-active, .slide, [class*="message"], .announcement-bar__slide[aria-hidden="false"]').first();
         const text  = await slide.innerText().catch(() => '');
         expect(text.trim().length).toBeGreaterThan(0);
     });
@@ -315,7 +316,8 @@ test.describe('SUNTEK QC — Homepage & Navbar [SITE001, NAV001]', () => {
         await expectPageFound(page);
     });
 
-    test('SITE001 — Account icon takes a logged-out visitor to login [TC_HP_027]', async ({ homepage, page, isMobile }) => {
+    test('SITE001 — Account icon takes a logged-out visitor to login [TC_HP_027]', async ({ homepage, page, isMobile, merchant }) => {
+        test.skip(!merchant.features.accounts, `${merchant.name} has customer accounts disabled`);
         test.skip(isMobile, 'On mobile the account link lives inside the menu on some themes');
 
         await homepage.accountLink.click();
@@ -465,6 +467,8 @@ test.describe('SUNTEK QC — Homepage & Navbar [SITE001, NAV001]', () => {
             await test.step(`card ${i + 1}`, async () => {
                 const card = productCards.nth(i);
                 await card.scrollIntoViewIfNeeded();
+                // Orion's carousel slides use content-visibility:auto — the price text only renders once on screen.
+                await expect(productCard.price(card)).toHaveText(/\d/);
                 const cardPrice = parseMoney(await productCard.price(card).innerText());
 
                 await productCard.titleLink(card).click();

@@ -18,10 +18,10 @@
 
 const MODULES = {
     homepage:   { file: 'tests/homepage.spec.js',   description: 'Header, hero, promo bar, product cards, nav, search' },
-    navigation: { file: 'tests/navigation.spec.js', description: 'Journeys, mega-menus, mobile menu, 404 page' },
+    navigation: { file: 'tests/navigation.spec.js', description: 'Journeys, mobile menu, 404 page' },
     plp:        { file: 'tests/plp.spec.js',        description: 'Collection page, product cards, sort, h1' },
-    pdp:        { file: 'tests/pdp.spec.js',        description: 'Product page, variants, price, Add to Cart' },
-    cart:       { file: 'tests/cart.spec.js',       description: 'Mini-cart, /cart page, quantity, remove, checkout button' },
+    pdp:        { file: 'tests/pdp.spec.js',        description: 'Product page, gallery, variants, price, Add to Cart, subscriptions, SEO' },
+    cart:       { file: 'tests/cart.spec.js',       description: 'Drawer, /cart page, lines, quantity, remove, empty state, persistence, free-shipping bar, upsell, checkout' },
     checkout:   { file: 'tests/checkout.spec.js',   description: 'Shopify checkout page (stops before order)' },
     technical:  { file: 'tests/technical.spec.js',  description: 'Broken images, JS errors, 5xx, SEO, load time' },
     visual:     { file: 'tests/visual.spec.js',     description: 'Screenshot regression vs baselines' },

@@ -16,7 +16,8 @@ class CartBadgeElement {
     get locator() {
         return this.page.locator(
             this.locators.resolve('cartBadge', '.nav__cart-count, .cart-count, [class*="cart-count"], .nav__cart-count-text')
-        ).first();
+        // Visible one: Abc renders three badges, the first two hidden and stuck at "0".
+        ).filter({ visible: true }).first();
     }
 
     /** @returns {Promise<number>} */

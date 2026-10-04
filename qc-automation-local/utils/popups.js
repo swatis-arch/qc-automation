@@ -111,4 +111,18 @@ async function installPopupGuard(page, merchant, { headed }) {
     page.on('domcontentloaded', () => { dismissPopups(page, merchant).catch(() => {}); });
 }
 
-module.exports = { dismissPopups, installPopupGuard, GENERIC_CLOSE };
+/**
+ * Press a key the way a keyboard user would. The guard's locator handler only runs before
+ * locator actions, not raw key presses, and a delayed popup (Revitin's "Promotional popup",
+ * seen even headless ~20 s after load) traps Tab focus inside itself — so close a visible one
+ * first, as the guard would for a click.
+ * @param {import('@playwright/test').Page} page
+ * @param {object} merchant
+ * @param {string} key
+ */
+async function pressKey(page, merchant, key) {
+    await dismissPopups(page, merchant, { waitMs: 0 });
+    await page.keyboard.press(key);
+}
+
+module.exports = { dismissPopups, installPopupGuard, pressKey, GENERIC_CLOSE };

@@ -4,17 +4,10 @@
  * Tests end-to-end navigation journeys:
  *   homepage → collection → product (and back)
  *   Mobile menu behaviour
- *   Mega-menu sub-category navigation
  *
  * Regression Catalogue IDs: NAV001
  * Priority: P1
  * Type: Universal
- *
- * The Skincare / About Us mega-menu tests below cover content that only
- * exists on theoutset.com (a "Skincare" category, a "/pages/hyaluroset-complex"
- * page) — there's no config field that generalizes brand-specific mega-menu
- * content, so those tests explicitly skip for every other merchant rather
- * than being forced to "pass" against markup that doesn't exist.
  */
 
 const { test, expect } = require('../fixtures/base');
@@ -37,7 +30,7 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
         // Step 3: Click first product card → PDP
         const firstCard = page.locator(merchant.locators.get('productCard')).filter({ visible: true }).first();
         // The card may itself be the link (some themes) -- match the card too, not only descendants.
-        const productLink = 'a[href*="/products/"]';
+        const productLink = merchant.locators.preferred('cardTitleLink', 'a[href*="/products/"]');
         const cardLink  = firstCard.locator(productLink).or(firstCard.and(page.locator(productLink))).filter({ visible: true }).first();
         await cardLink.waitFor({ state: 'visible', timeout: 15_000 });
         await cardLink.click();
@@ -48,48 +41,6 @@ test.describe('SUNTEK QC — Navigation [NAV001]', () => {
         // Some themes have several <h1>s (e.g. a hidden nav title) -- assert on a visible one.
         // The merchant's product-title locator (falls back to h1): some themes have no <h1> on the PDP.
         await expect(page.locator(merchant.locators.resolve('productTitle', 'h1')).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
-    });
-
-    // ── Mega-menus (Outset-specific content — see file header) ────────────────
-
-    test('@smoke NAV001 — Skincare mega-menu opens on hover', async ({ navbar, page, merchant }) => {
-        test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
-        await navbar.hoverSkincare();
-        const submenu = navbar.megaMenu.first();
-        await expect(submenu).toBeVisible({ timeout: 5_000 });
-    });
-
-    test('NAV001 — Skincare submenu sub-category links are visible', async ({ navbar, page, merchant }) => {
-        test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
-        await navbar.verifySkincareSubmenu();
-    });
-
-    // Parameterised: Skincare submenu → collection navigation
-    const skincareLinks = [
-        { label: 'Cleansers',     href: '/collections/cleansers-exfoliators',  pattern: /cleansers/ },
-        { label: 'Moisturizers',  href: '/collections/moisturizers-masks',     pattern: /moisturizers/ },
-        { label: 'Serums & Oils', href: '/collections/serums-oils',            pattern: /serums-oils/ },
-    ];
-
-    for (const { label, href, pattern } of skincareLinks) {
-        test(`NAV001 — Skincare submenu → "${label}" collection loads`, async ({ navbar, page, merchant }) => {
-            test.skip(merchant.slug !== 'outset', 'Skincare mega-menu is Outset-specific content');
-            await navbar.hoverSkincare();
-            const link = navbar.megaMenu.locator(`a[href="${href}"]`).first();
-            await link.waitFor({ state: 'visible', timeout: 5_000 });
-            await link.click();
-            await expect(page).toHaveURL(pattern, { timeout: 15_000 });
-            await expectPageFound(page);
-        });
-    }
-
-    // ── About Us mega-menu (Outset-specific content — see file header) ────────
-
-    test('@smoke NAV001 — About Us mega-menu opens on hover', async ({ navbar, page, merchant }) => {
-        test.skip(merchant.slug !== 'outset', 'About Us mega-menu is Outset-specific content');
-        await navbar.hoverAboutUs();
-        const submenu = page.locator(`${merchant.locators.get('megaMenu')}.is-expanded`);
-        await expect(submenu.locator('a[href="/pages/hyaluroset-complex"]').first()).toBeVisible({ timeout: 5_000 });
     });
 
     // ── Breadcrumbs ────────────────────────────────────────────────────────────

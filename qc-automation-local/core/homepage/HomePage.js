@@ -14,6 +14,7 @@
 const { dismissPopups } = require('../../utils/popups');
 const { getMetaDescription, canonicalLink } = require('../../utils/page-checks');
 const { collectLinks, internalPageUrls }    = require('../../utils/link-check');
+const { scrollThroughPage }                 = require('../../utils/scroll');
 const AnnouncementBar    = require('./AnnouncementBar');
 const Footer             = require('./Footer');
 const MobileMenuElement  = require('../../elements/MobileMenuElement');
@@ -215,17 +216,7 @@ class HomePage {
      * full-page hero slideshow).
      */
     async scrollThroughPage() {
-        const viewportHeight = this.page.viewportSize().height;
-        for (;;) {
-            const { y, max } = await this.page.evaluate(() => ({
-                y:   window.scrollY,
-                max: document.documentElement.scrollHeight - window.innerHeight,
-            }));
-            if (y >= max) break;
-            await this.page.mouse.wheel(0, viewportHeight * 0.8);
-            await this.page.waitForTimeout(150);   // give the lazy-loader time to react between steps
-        }
-        await this.page.evaluate(() => window.scrollTo(0, 0));
+        await scrollThroughPage(this.page);
     }
 
     /** Unique same-site page URLs linked from anywhere on the homepage */
