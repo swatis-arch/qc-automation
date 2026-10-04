@@ -7,7 +7,8 @@
  * using fixtures/base.js unchanged.
  *
  * Each ai* call screenshots the page and sends it to the vision model set by
- * MIDSCENE_MODEL_* in .env (Claude is not a supported Midscene model).
+ * MIDSCENE_MODEL_* in .env, else Gemini via GOOGLE_API_KEY (see utils/midscene-env.js).
+ * Claude is not a supported Midscene model.
  *
  * Rule (CLAUDE.md): Playwright determines PASS/FAIL. Use ai* helpers to find,
  * click and read elements; make the final check with expect(), not aiAssert.
@@ -17,6 +18,7 @@
  *   test('...', async ({ pdp, aiTap, aiQuery }) => { ... });
  */
 
+const { midsceneConfigured } = require('../utils/midscene-env');   // before Midscene loads
 const { test: base, expect }  = require('./base');
 const { PlaywrightAiFixture } = require('@midscene/web/playwright');
 
@@ -24,7 +26,6 @@ const test = base.extend(PlaywrightAiFixture({
     waitForNetworkIdleTimeout: 2000,
 }));
 
-const key = process.env.MIDSCENE_MODEL_API_KEY;
-const aiConfigured = Boolean(key && key !== 'your_model_api_key_here');
+const aiConfigured = midsceneConfigured;
 
 module.exports = { test, expect, aiConfigured };

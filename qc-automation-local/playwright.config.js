@@ -12,16 +12,16 @@
  *
  * -- Running tests ------------------------------------------------------------
  *   npm test                                   Full regression (all merchants)
- *   npm run test:smoke                         @smoke subset, desktop, $MERCHANT (default outset)
- *   npm run test:desktop                       Desktop Chromium, $MERCHANT (default outset)
- *   npm run test:mobile                        Mobile Chrome, $MERCHANT (default outset)
+ *   npm run test:smoke                         @smoke subset, desktop, $MERCHANT (default: first active merchant)
+ *   npm run test:desktop                       Desktop Chromium, $MERCHANT (default: first active merchant)
+ *   npm run test:mobile                        Mobile Chrome, $MERCHANT (default: first active merchant)
  *   npm run test:headed                        Headed (debug) mode
  *   MERCHANT=koh npm test                      Env-var filter (CI)
  *   USE_STAGING=true npm test                  Run against staging URLs
  *   npx playwright test --project=koh-desktop-chromium   One merchant + browser
  *
  * -- Adding a new merchant ----------------------------------------------------
- *   1. Copy merchants/outset/ to merchants/<your-slug>/
+ *   1. Copy merchants/abc/ to merchants/<your-slug>/
  *   2. Fill in merchants/<your-slug>/config.js and locators.js
  *   3. Add '<your-slug>' to ACTIVE_MERCHANTS in merchants/index.js
  *   4. Run: npx playwright test --list   (verify new projects appear)
@@ -53,6 +53,7 @@
 require('dotenv').config();
 
 const { defineConfig, devices } = require('@playwright/test');
+const { midsceneConfigured }    = require('./utils/midscene-env');
 
 // Inline JSDoc cast: equivalent to TypeScript's `as MerchantConfig[]`.
 // A line-level @type annotation won't work here because TypeScript sees
@@ -129,8 +130,8 @@ module.exports = defineConfig({
         ['json', { outputFile: 'reports/results.json' }],
         ['list'],
         // Midscene AI trial: step-by-step replay report in midscene_run/report/.
-        // Only added when a Midscene model is configured (see fixtures/ai.js).
-        ...(process.env.MIDSCENE_MODEL_API_KEY
+        // Only added when a Midscene model is configured (see utils/midscene-env.js).
+        ...(midsceneConfigured
             ? [['@midscene/web/playwright-reporter', { type: 'merged' }]]
             : []),
     ],

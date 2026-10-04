@@ -51,7 +51,7 @@ triggers the GitHub Actions workflow, and results come back through the same web
 ```
 ├── merchants/                     ← one folder per merchant + the registry
 │   ├── index.js                   ← ACTIVE_MERCHANTS list, loadConfig(), MERCHANT env filter
-│   ├── outset/  revitin/  koh/  abc/
+│   ├── revitin/  koh/  abc/  orion/
 │   │   ├── config.js              ← URLs, page paths, products, feature flags, integrations
 │   │   └── locators.js            ← raw selector strings only (no logic)
 │
@@ -135,7 +135,7 @@ cp .env.example .env     # Windows PowerShell: copy .env.example .env
 
 | Variable | Purpose |
 |----------|---------|
-| `MERCHANT` | Restrict the run to one slug (`outset`, `revitin`, `koh`, `abc`). Blank = all merchants. |
+| `MERCHANT` | Restrict the run to one slug (`revitin`, `koh`, `abc`, `orion`). Blank = all active merchants. |
 | `USE_STAGING` | `true` → use each merchant's `urls.staging` instead of `urls.production`. |
 | `CLAUDE_API_KEY` / `CLAUDE_MODEL` | Failure analysis. |
 | `SLACK_WEBHOOK_URL` | Report notification. |
@@ -146,7 +146,7 @@ There is no global `BASE_URL` — every merchant carries its own URLs in `mercha
 ### 4. Run tests
 ```bash
 npm test                    # everything: all ACTIVE merchants × desktop + mobile
-npm run test:smoke          # @smoke-tagged tests, desktop, for $MERCHANT (default outset)
+npm run test:smoke          # @smoke-tagged tests, desktop, for $MERCHANT (default: first active merchant, revitin)
 npm run test:desktop        # desktop project only
 npm run test:mobile         # mobile project only
 npm run test:headed         # desktop, headed
@@ -159,7 +159,7 @@ npm run test:report         # open reports/html
 
 The `desktop` / `mobile` / `smoke` / `visual` / `technical` scripts go through
 `scripts/run-project.js`, which builds the project name `<MERCHANT>-desktop-chromium`
-(or `-mobile-chrome`) from `MERCHANT` (default `outset`). To target one project directly:
+(or `-mobile-chrome`) from `MERCHANT` (default: the first entry of `ACTIVE_MERCHANTS`, currently `revitin`). To target one project directly:
 
 ```bash
 npx playwright test --project=koh-desktop-chromium tests/pdp.spec.js
@@ -227,21 +227,20 @@ npm run qa:report           # all four steps in one go; extra args go to `playwr
 
 | Slug | Site | Subscriptions | Reviews |
 |------|------|---------------|---------|
-| `outset` | theoutset.com | — | Okendo |
 | `revitin` | revitin.com | Recharge | Judge.me |
 | `koh` | kreaturesofhabit.com | Skio | Junip |
 | `abc` | abchome.com | — | Yotpo |
+| `orion` | oriontelescopes.myshopify.com (password-protected — set `ORION_STOREFRONT_PASSWORD`) | — | Judge.me |
 
-Some specs are merchant-gated with `test.skip(...)` (e.g. the Skincare/About Us mega-menu
-tests only run for `outset`; search tests skip when `features.search` is false).
+Some specs are merchant-gated with `test.skip(...)` (e.g. search tests skip when `features.search` is false).
 
 ### Onboarding a new merchant
-1. Copy an existing folder: `merchants/outset/` → `merchants/<slug>/`.
+1. Copy an existing folder: `merchants/abc/` → `merchants/<slug>/`.
 2. Edit `config.js` (URLs, `pages`, `products.default/secondary`, `features`, `integrations`, `navLinks`). `config.slug` must equal the folder name.
 3. Edit `locators.js` with selectors verified against the live site.
 4. Add `'<slug>'` to `ACTIVE_MERCHANTS` in `merchants/index.js`.
 5. `npx playwright test --list` — you should see `<slug>-desktop-chromium` and `<slug>-mobile-chrome`.
-6. Add the slug to `VALID_MERCHANTS` in `slack-bot/src/index.js` and redeploy the Worker (**currently only `outset` is listed there**).
+6. Add the slug to `VALID_MERCHANTS` in `slack-bot/src/index.js` and redeploy the Worker.
 7. Run the smoke suite: `MERCHANT=<slug> npm run test:smoke`.
 
 `fixtures/base.js` and `playwright.config.js` need no changes.
@@ -290,9 +289,9 @@ Layering rules (locators → elements → page objects → specs) are in [CLAUDE
 | Schedule, daily 02:00 UTC | **Regression tier** (desktop + mobile) → Claude RCA → report → Slack | **All** `ACTIVE_MERCHANTS` |
 | `workflow_dispatch` `suite=regression` | Same as above | `merchant` input, or all if blank |
 | `workflow_dispatch` `suite=full` | **Full tier** (adds visual) → same AI/report/Slack steps | `merchant` input, or all if blank |
-| `workflow_dispatch` `suite=smoke` | `@smoke`, desktop | `merchant` input (default `outset`) |
-| `workflow_dispatch` `suite=visual` | `tests/visual.spec.js`, desktop | `merchant` input (default `outset`) |
-| `workflow_dispatch` `suite=technical` | `tests/technical.spec.js`, desktop | `merchant` input (default `outset`) |
+| `workflow_dispatch` `suite=smoke` | `@smoke`, desktop | `merchant` input (default `revitin`) |
+| `workflow_dispatch` `suite=visual` | `tests/visual.spec.js`, desktop | `merchant` input (default `revitin`) |
+| `workflow_dispatch` `suite=technical` | `tests/technical.spec.js`, desktop | `merchant` input (default `revitin`) |
 
 Only the regression/full job runs the AI/report/Slack steps. There is no `pull_request` trigger.
 

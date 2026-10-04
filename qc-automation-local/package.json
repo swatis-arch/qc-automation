@@ -21,12 +21,13 @@
     "test:visual":             "node scripts/run-project.js desktop tests/visual.spec.js",
     "test:visual:update":      "node scripts/run-project.js desktop tests/visual.spec.js --update-snapshots",
     "test:technical":          "node scripts/run-project.js desktop tests/technical.spec.js",
-    "test:codegen":            "playwright codegen https://theoutset.com",
+    "test:codegen":            "playwright codegen",
     "analyze:failures":        "node ai/analyze-failure.js",
     "generate:report":         "node ai/generate-report.js",
     "notify:slack":            "node notifications/slack.js",
     "qa:report":               "node qa-report.js",
-    "test:ai":                 "node scripts/run-project.js desktop tests/midscene-trial.spec.js"
+    "test:ai":                 "node scripts/run-project.js desktop tests/midscene-trial.spec.js",
+    "test:magnitude":          "magnitude --plain"
   },
   "keywords": ["playwright", "automation", "qa", "shopify", "regression", "suntek", "claude"],
   "author": "Suntek AI",
@@ -34,7 +35,8 @@
   "devDependencies": {
     "@midscene/web": "^1.13.3",
     "@playwright/test": "^1.48.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "magnitude-test": "^0.3.13"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
