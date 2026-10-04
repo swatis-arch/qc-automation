@@ -77,6 +77,23 @@ const test = base.extend({
      * before they can block the test. Installed before any navigation; the page
      * objects also close a popup right after they load a page. See utils/popups.js.
      */
+    // -- storefrontUnlock (auto) ------------------------------------------------
+    /**
+     * Password-protected (pre-launch) Shopify stores: submit the storefront password once per
+     * test context so every page loads the real store instead of /password. No-op unless
+     * <SLUG>_STOREFRONT_PASSWORD is set in .env (e.g. ORION_STOREFRONT_PASSWORD) — the secret
+     * stays out of the merchant config.
+     */
+    storefrontUnlock: [async ({ context, merchant, baseURL }, use) => {
+        const password = process.env[`${merchant.slug.toUpperCase()}_STOREFRONT_PASSWORD`];
+        if (password) {
+            await context.request.post(new URL('/password', baseURL).toString(), {
+                form: { form_type: 'storefront_password', utf8: '✓', password },
+            });
+        }
+        await use();
+    }, { scope: 'test', auto: true }],
+
     popupGuard: [async ({ page, merchant }, use, testInfo) => {
         await installPopupGuard(page, merchant, { headed: testInfo.project.use.headless === false });
         await use();

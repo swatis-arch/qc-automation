@@ -14,7 +14,7 @@
  *   node scripts/run-suite.js full all --list       # show what would run
  *
  * Merchants: honours MERCHANT (blank = every ACTIVE merchant), exactly like
- * `npx playwright test`. Unlike run-project.js there is no 'outset' default.
+ * `npx playwright test`. Unlike run-project.js there is no single-merchant default.
  * Tiers and modules are defined in utils/tiers.js.
  */
 

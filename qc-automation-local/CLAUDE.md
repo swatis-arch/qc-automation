@@ -135,7 +135,7 @@ Every identified failure must eventually be classified as one of:
 |--------|---------|----------|
 | `get(key)` | Merchant selector, **throws** if missing | Every merchant must define it |
 | `resolve(key, fallback)` | Merchant selector `, ` fallback chain (both match) | Optional, theme-variable; both are safe to match together |
-| `preferred(key, fallback)` | Merchant selector if defined, else fallback — never both | The merchant selector deliberately excludes a decoy (e.g. Outset's `addToCartBtn` excludes the sticky `nav.product-form-bar` duplicate) |
+| `preferred(key, fallback)` | Merchant selector if defined, else fallback — never both | The merchant selector deliberately excludes a decoy (e.g. an `addToCartBtn` that excludes a sticky-bar duplicate of the button) |
 | `has(key)` | boolean | Conditional logic |
 
 ### Fixtures & merchants

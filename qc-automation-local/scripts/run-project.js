@@ -7,7 +7,7 @@
  * A plain npm script can't hardcode the right name (it depends on MERCHANT),
  * and reading env vars portably across cmd.exe / PowerShell / bash inside a
  * package.json script string isn't reliable -- so this resolves MERCHANT
- * (default 'outset') here in Node and builds the real project name before
+ * (default: the first active merchant) here in Node and builds the real project name before
  * shelling out to `playwright test`.
  *
  * Usage: node scripts/run-project.js <desktop|mobile> [...extra playwright args]
@@ -29,7 +29,8 @@ if (!SUFFIX_MAP[suffix]) {
     process.exit(1);
 }
 
-const merchant    = process.env.MERCHANT || 'outset';
+const { ACTIVE_MERCHANTS } = require('../merchants/index');
+const merchant    = process.env.MERCHANT || ACTIVE_MERCHANTS[0];
 const projectName = `${merchant}-${SUFFIX_MAP[suffix]}`;
 
 console.log(`$ npx playwright test --project=${projectName} ${extra.join(' ')}`);

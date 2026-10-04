@@ -2,7 +2,7 @@
  * slack-bot/src/index.js — /qc Slack slash command receiver
  *
  * Lets anyone in the Slack workspace type:
- *   /qc run smoke outset
+ *   /qc run smoke revitin
  *   /qc run regression
  *   /qc help
  *
@@ -19,7 +19,7 @@
 const VALID_SUITES = ['smoke', 'regression', 'full', 'visual', 'technical'];
 
 // Keep in sync with ACTIVE_MERCHANTS in merchants/index.js
-const VALID_MERCHANTS = ['outset'];
+const VALID_MERCHANTS = ['revitin', 'koh', 'abc', 'orion'];   // keep in sync with ACTIVE_MERCHANTS
 
 export default {
   async fetch(request, env) {
@@ -55,7 +55,7 @@ export default {
     }
 
     const suite = (args[1] || 'smoke').toLowerCase();
-    const merchant = (args[2] || 'outset').toLowerCase();
+    const merchant = (args[2] || VALID_MERCHANTS[0]).toLowerCase();
 
     if (!VALID_SUITES.includes(suite)) {
       return jsonResponse(ephemeral(
@@ -160,10 +160,10 @@ function helpMessage() {
       '*SUNTEK AI QC — /qc commands*',
       '`/qc run <suite> [merchant]` — start a regression run',
       `  suites: ${VALID_SUITES.join(', ')}`,
-      `  merchants: ${VALID_MERCHANTS.join(', ')} (defaults to outset)`,
+      `  merchants: ${VALID_MERCHANTS.join(', ')} (defaults to ${VALID_MERCHANTS[0]})`,
       'Examples:',
-      '`/qc run smoke` — quick smoke test on outset',
-      '`/qc run regression outset` — full regression on outset',
+      '`/qc run smoke` — quick smoke test on the default merchant',
+      '`/qc run regression koh` — full regression on koh',
       '`/qc help` — show this message',
     ].join('\n')
   );

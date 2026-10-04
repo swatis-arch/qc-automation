@@ -13,8 +13,8 @@
  *
  * -- Filtering to a single merchant -------------------------------------------
  *  Set MERCHANT=<slug> in .env (or CI env) to restrict the run to one site.
- *  Example:   MERCHANT=outset npm test
- *  Or via CLI:  npm test -- --project=outset-desktop-chromium
+ *  Example:   MERCHANT=koh npm test
+ *  Or via CLI:  npm test -- --project=koh-desktop-chromium
  */
 
 'use strict';
@@ -24,10 +24,10 @@ const LocatorManager = require('../locators/LocatorManager');
 // -- Active Merchants ---------------------------------------------------------
 //  Add / remove slugs here. Each slug must match a folder under merchants/.
 const ACTIVE_MERCHANTS = [
-    'outset',
     'revitin',
     'koh',
     'abc',
+    'orion',   // Theme-preview URL for now — see merchants/orion/config.js
 ];
 
 // -- Load & validate configs --------------------------------------------------

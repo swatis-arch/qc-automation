@@ -1,11 +1,11 @@
 # SUNTEK QC Slack Bot — `/qc` slash command
 
-Lets anyone in the Slack workspace type `/qc run smoke outset` and kick off a
+Lets anyone in the Slack workspace type `/qc run smoke revitin` and kick off a
 regression run in GitHub Actions. Results are posted back to the same Slack
 channel a few minutes later by the existing `notifications/slack.js` step.
 
 ```
-Slack (/qc run smoke outset)
+Slack (/qc run smoke revitin)
         │
         ▼
 Cloudflare Worker (this folder)  ── verifies the request came from Slack
@@ -38,7 +38,7 @@ Go to https://api.slack.com/apps → **Create New App** → From scratch.
   - Request URL: `https://suntek-qc-slack-bot.<your-subdomain>.workers.dev/slack/qc`
     (you'll get the real URL in step 6 — come back and fill this in after deploying)
   - Short description: `Run SUNTEK QC regression tests`
-  - Usage hint: `run smoke outset`
+  - Usage hint: `run smoke revitin`
 - Under **Basic Information**, copy the **Signing Secret** — you'll need it in step 5.
 - Install the app to your workspace (Install App → Install to Workspace).
 
@@ -68,7 +68,7 @@ Request URL to `<deployed URL>/slack/qc` → Save.
 In any channel the app is in:
 ```
 /qc help
-/qc run smoke outset
+/qc run smoke revitin
 ```
 You should see an immediate "🚀 started a run" message, then the full
 PASS/FAIL report a few minutes later once the workflow finishes.
