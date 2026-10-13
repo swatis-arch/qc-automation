@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suntek QC Console</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --line: #e2e6eb;
+    --accent: #2f5bea; --accent-text: #fff; --pass: #1f8a4c; --fail: #c62f2f; --warn: #b7791f; --code: #f1f3f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --panel: #1a1e24; --text: #e6e9ed; --muted: #95a0ad; --line: #2b313a;
+      --accent: #6d8cff; --accent-text: #0b0e12; --pass: #4cc38a; --fail: #ff6b6b; --warn: #e6b450; --code: #12161b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .sp { flex: 1; }
+  header input { width: 140px; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.3fr); gap: 16px; padding: 16px; height: calc(100vh - 57px); }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; height: auto; } .chat { height: 70vh; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-height: 0; }
+  section > h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .msgs { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 92%; padding: 8px 12px; border-radius: 10px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.me { align-self: flex-end; background: var(--accent); color: var(--accent-text); }
+  .msg.bot { align-self: flex-start; background: var(--code); border: 1px solid var(--line); }
+  .msg .who { font-size: 11px; opacity: .75; display: block; margin-bottom: 2px; }
+  .msg button { margin-top: 8px; margin-right: 6px; }
+  form.ask { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+  input, textarea, button { font: inherit; color: inherit; }
+  input, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  textarea { flex: 1; resize: none; height: 42px; }
+  button { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  button:disabled { opacity: .5; cursor: default; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
+  .chips button { font-size: 12px; padding: 4px 10px; }
+  .right { display: grid; grid-template-rows: minmax(140px, 32%) 1fr; gap: 16px; min-height: 0; }
+  @media (max-width: 860px) { .right { grid-template-rows: auto auto; } }
+  .list { overflow: auto; }
+  .row { display: grid; grid-template-columns: 82px 1fr auto; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); cursor: pointer; align-items: center; }
+  .row:hover, .row.sel { background: var(--code); }
+  .row .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .meta { color: var(--muted); font-size: 12px; }
+  .st { font-size: 12px; font-weight: 600; text-transform: uppercase; }
+  .st.passed { color: var(--pass); } .st.failed { color: var(--fail); } .st.running, .st.queued, .st.reporting { color: var(--accent); }
+  .st.cancelled, .st.interrupted, .st.no { color: var(--warn); }
+  .detail { overflow: auto; padding: 14px; }
+  .detail h3 { margin: 0 0 4px; font-size: 15px; }
+  .stats { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0; }
+  .stats div { font-size: 13px; } .stats b { font-size: 18px; display: block; }
+  .fail { border: 1px solid var(--line); border-left: 3px solid var(--fail); border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+  .fail summary { cursor: pointer; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow: auto; font-size: 12px; max-height: 420px; white-space: pre-wrap; }
+  a { color: var(--accent); }
+  .empty { color: var(--muted); padding: 14px; }
+  #login { position: fixed; inset: 0; background: var(--bg); display: none; place-items: center; }
+  #login form { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px; width: min(360px, calc(100vw - 32px)); display: grid; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Suntek QC Console</h1>
+  <span class="pill" id="aiMode">…</span>
+  <span class="sp"></span>
+  <label class="meta" for="user">You:</label>
+  <input id="user" placeholder="your name" maxlength="40">
+</header>
+
+<main>
+  <section class="chat">
+    <h2>Command</h2>
+    <div class="msgs" id="msgs"></div>
+    <div class="chips" id="chips"></div>
+    <form class="ask" id="ask">
+      <textarea id="text" placeholder='e.g. "run smoke on koh", "run pdp abc mobile", "why did the cart tests fail?"'></textarea>
+      <button id="sendBtn">Send</button>
+    </form>
+  </section>
+
+  <div class="right">
+    <section>
+      <h2>Runs</h2>
+      <div class="list" id="runs"></div>
+    </section>
+    <section>
+      <h2>Run detail</h2>
+      <div class="detail" id="detail"><div class="empty">Select a run.</div></div>
+    </section>
+  </div>
+</main>
+
+<div id="login">
+  <form id="loginForm">
+    <strong>Suntek QC Console</strong>
+    <span class="meta">Enter the team access key.</span>
+    <input id="key" type="password" autocomplete="current-password" placeholder="Access key">
+    <button>Open console</button>
+    <span id="loginErr" style="color:var(--fail)"></span>
+  </form>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+let selected = null, stream = null, runsCache = [], meta = {};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json' } });
+  if (res.status === 401 && path !== '/api/login') { showLogin(); throw new Error('Login required'); }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function showLogin() { $('login').style.display = 'grid'; $('key').focus(); }
+$('loginForm').onsubmit = async e => {
+  e.preventDefault();
+  try {
+    await api('/api/login', { method: 'POST', body: JSON.stringify({ key: $('key').value }) });
+    const next = new URLSearchParams(location.search).get('next');
+    if (next && /^\/runs\/[\w-]+\//.test(next)) { location.href = next; return; }
+    $('login').style.display = 'none'; init();
+  }
+  catch (err) { $('loginErr').textContent = err.message; }
+};
+
+$('user').value = store.get('qc_user') || '';
+$('user').onchange = () => store.set('qc_user', $('user').value.trim());
+
+function addMsg(who, text, cls, extra) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls;
+  div.innerHTML = `<span class="who">${esc(who)}</span>${esc(text)}`;
+  if (extra) div.appendChild(extra);
+  $('msgs').appendChild(div);
+  $('msgs').scrollTop = $('msgs').scrollHeight;
+}
+
+async function send(text) {
+  const user = $('user').value.trim();
+  if (!user) { $('user').focus(); $('user').placeholder = 'enter your name first'; return; }
+  addMsg(user, text, 'me');
+  $('sendBtn').disabled = true;
+  try {
+    const out = await api('/api/command', { method: 'POST', body: JSON.stringify({ text, user }) });
+    let extra = null;
+    if (out.confirm) {
+      extra = document.createElement('div');
+      const go = document.createElement('button');
+      go.textContent = 'Start this run';
+      go.onclick = async () => {
+        go.disabled = no.disabled = true;
+        const r = await api('/api/runs', { method: 'POST', body: JSON.stringify({ plan: out.plan, user, command: text, ticket: out.ticket }) });
+        addMsg('QC', `Queued: ${r.run.label}`, 'bot');
+        await loadRuns(); select(r.run.id);
+      };
+      const no = document.createElement('button');
+      no.className = 'ghost'; no.textContent = 'Cancel';
+      no.onclick = () => { go.disabled = no.disabled = true; };
+      extra.append(go, no);
+      out.reply = (out.reply || '') + '\nThis is a long run (it can take hours and may trigger Cloudflare 429s). Start it?';
+    }
+    addMsg('QC', out.reply || '(no reply)', 'bot', extra);
+    if (out.run) { await loadRuns(); select(out.run.id); }
+  } catch (err) {
+    addMsg('QC', 'Error: ' + err.message, 'bot');
+  } finally {
+    $('sendBtn').disabled = false;
+  }
+}
+
+$('ask').onsubmit = e => { e.preventDefault(); const t = $('text').value.trim(); if (t) { $('text').value = ''; send(t); } };
+$('text').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('ask').requestSubmit(); } };
+
+function fmtTime(iso) { return iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''; }
+
+async function loadRuns() {
+  runsCache = await api('/api/runs');
+  $('runs').innerHTML = runsCache.length ? runsCache.map(r => `
+    <div class="row ${r.id === selected ? 'sel' : ''}" data-id="${esc(r.id)}">
+      <span class="st ${esc(r.status)}">${esc(r.status)}</span>
+      <span class="lbl">${r.ticket ? `<b>${esc(r.ticket.key)}</b> · ` : ''}${esc(r.label)}<br><span class="meta">${esc(r.user)} · ${fmtTime(r.created)}</span></span>
+      <span class="meta">${r.summary ? `${r.summary.passed}✓ ${r.summary.failed}✗` : ''}</span>
+    </div>`).join('') : '<div class="empty">No runs yet. Type a command to start one.</div>';
+  $('runs').querySelectorAll('.row').forEach(el => el.onclick = () => select(el.dataset.id));
+}
+
+async function select(id) {
+  selected = id;
+  document.querySelectorAll('.row').forEach(el => el.classList.toggle('sel', el.dataset.id === id));
+  if (stream) { stream.close(); stream = null; }
+  const run = await api('/api/runs/' + encodeURIComponent(id));
+  renderDetail(run);
+  if (run.status === 'running' || run.status === 'queued') {
+    stream = new EventSource(`/api/runs/${encodeURIComponent(id)}/stream`);
+    stream.addEventListener('log', e => {
+      const pre = $('log'); if (!pre) return;
+      const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+      pre.textContent += JSON.parse(e.data);
+      if (atBottom) pre.scrollTop = pre.scrollHeight;
+    });
+    stream.addEventListener('done', async () => { stream.close(); stream = null; await loadRuns(); if (selected === id) select(id); });
+  }
+}
+
+function renderDetail(r) {
+  const s = r.summary;
+  const live = r.status === 'running' || r.status === 'queued';
+  $('detail').innerHTML = `
+    <h3>${esc(r.label)}</h3>
+    ${r.note ? `<p class="meta" style="white-space:pre-wrap">${esc(r.note)}</p>` : ''}
+    ${r.ticket ? `<p>Jira: <a href="${esc(r.ticket.url)}" target="_blank" rel="noopener">${esc(r.ticket.key)}</a> · ${esc(r.ticket.summary)}
+      ${r.jiraPosted ? ` · <span class="meta">result posted by ${esc(r.jiraPosted.by)}, ${fmtTime(r.jiraPosted.at)}</span>`
+        : (meta.jira && ['passed', 'failed'].includes(r.status) ? ` · <button class="ghost" id="jiraBtn">Post result to ${esc(r.ticket.key)}</button>` : '')}</p>` : ''}
+    <div class="meta">${esc(r.user)} · “${esc(r.command)}” · <span class="st ${esc(r.status)}">${esc(r.status)}</span>
+      ${r.started ? ' · started ' + fmtTime(r.started) : ''}${r.finished ? ' · finished ' + fmtTime(r.finished) : ''}</div>
+    ${s ? `<div class="stats">
+      <div><b style="color:var(--pass)">${s.passed}</b>passed</div>
+      <div><b style="color:var(--fail)">${s.failed}</b>failed</div>
+      <div><b style="color:var(--warn)">${s.flaky}</b>flaky</div>
+      <div><b>${s.skipped}</b>skipped</div>
+      <div><b>${s.durationMin}</b>min</div></div>` : ''}
+    <p>
+      ${live ? '<button class="ghost" id="cancelBtn">Cancel run</button>' : ''}
+      ${r.hasPdf ? `<a href="/runs/${esc(r.id)}/files/report.pdf" target="_blank" rel="noopener"><b>PDF report</b></a> · ` : ''}
+      ${r.hasReport ? `<a href="/runs/${esc(r.id)}/report/index.html" target="_blank" rel="noopener">Open Playwright report</a> · ` : ''}
+      <a href="/runs/${esc(r.id)}/files/log.txt" target="_blank" rel="noopener">Raw log</a>
+      ${s ? ` · <a href="/runs/${esc(r.id)}/files/results.json" target="_blank" rel="noopener">results.json</a>` : ''}
+      ${r.slack ? ` · <a href="/runs/${esc(r.id)}/files/qa-report.md" target="_blank" rel="noopener">QA report</a> · sent to Slack` : ''}
+    </p>
+    ${(r.failures || []).map(f => `
+      <details class="fail"><summary><b>${esc(f.title)}</b> <span class="meta">${esc(f.project)}${f.status === 'flaky' ? ' · flaky' : ''}</span></summary>
+      <pre>${esc(f.error || '(no error message)')}</pre>
+      <button class="ghost ask-why" data-q="${esc(`Why did "${f.title}" fail on ${f.project}?`)}">Ask AI why</button></details>`).join('')}
+    <pre id="log">${esc(r.log || '')}</pre>`;
+  const pre = $('log'); pre.scrollTop = pre.scrollHeight;
+  if ($('cancelBtn')) $('cancelBtn').onclick = async () => { await api('/api/cancel', { method: 'POST' }); };
+  if ($('jiraBtn')) $('jiraBtn').onclick = async () => {
+    if (!confirm(`Post this run's result as a comment on ${r.ticket.key}? It appears in Jira under the account set in the console.`)) return;
+    $('jiraBtn').disabled = true;
+    try { await api(`/api/runs/${encodeURIComponent(r.id)}/jira`, { method: 'POST', body: JSON.stringify({ user: $('user').value.trim() }) }); select(r.id); }
+    catch (err) { alert('Could not post to Jira: ' + err.message); $('jiraBtn').disabled = false; }
+  };
+  $('detail').querySelectorAll('.ask-why').forEach(b => b.onclick = () => send(b.dataset.q));
+}
+
+async function init() {
+  meta = await api('/api/meta');
+  $('aiMode').textContent = meta.ai ? `AI: ${meta.ai}` : 'AI: keywords only';
+  $('aiMode').title = meta.ai ? '' : 'Set CLAUDE_API_KEY (or GOOGLE_API_KEY) in .env for free-text commands and failure explanations';
+  const examples = ['status', ...(meta.jira ? ['test KOH-68'] : []), `run smoke ${meta.merchants[0]}`, `run pdp ${meta.merchants[1] || meta.merchants[0]} mobile`, 'what does the cart module cover?'];
+  $('chips').innerHTML = examples.map(x => `<button type="button" class="ghost">${esc(x)}</button>`).join('');
+  $('chips').querySelectorAll('button').forEach(b => b.onclick = () => { $('text').value = b.textContent; $('text').focus(); });
+  if (!$('msgs').children.length) {
+    addMsg('QC', `Type what you want to run or ask.\nTiers & modules: ${meta.targets.join(', ')}\nMerchants: ${meta.merchants.join(', ')}, all`, 'bot');
+  }
+  await loadRuns();
+  if (runsCache[0] && !selected) select(runsCache[0].id);
+  setInterval(loadRuns, 10000);
+}
+
+init().catch(() => {});
+</script>
+</body>
+</html>

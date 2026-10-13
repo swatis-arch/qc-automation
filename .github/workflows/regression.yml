@@ -13,12 +13,13 @@ on:
         options:
           - smoke
           - regression
+          - full
           - visual
           - technical
       merchant:
         description: 'Merchant slug (must match merchants/<slug>/config.js and be in ACTIVE_MERCHANTS)'
         required: false
-        default: 'outset'
+        default: 'revitin'
         type: string
       triggered_by:
         description: 'Who/what triggered this run (for Slack attribution)'
@@ -34,6 +35,12 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# The suite lives in qc-automation-local/, so every `run:` step starts there.
+# Artifact `path:` values are not affected by this and include the folder.
+defaults:
+  run:
+    working-directory: qc-automation-local
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 jobs:
@@ -57,6 +64,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: qc-automation-local/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -69,14 +77,15 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'outset' }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
+          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
 
       - name: Upload smoke report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: smoke-report-${{ github.run_number }}
-          path: reports/
+          path: qc-automation-local/reports/
           retention-days: 7
 
   # ── Full Regression ──────────────────────────────────────────────────────────
@@ -84,7 +93,7 @@ jobs:
     name: Full Regression — Desktop + Mobile
     if: >
       github.event_name == 'schedule' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'regression')
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.suite == 'regression' || github.event.inputs.suite == 'full'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -97,6 +106,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: qc-automation-local/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -104,11 +114,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Run full regression (desktop + mobile)
-        run: npx playwright test
+      # Tier comes from the suite input: 'full' for major releases, otherwise the
+      # daily 'regression' tier (schedule has no input). See utils/tiers.js.
+      - name: Run ${{ github.event.inputs.suite == 'full' && 'full' || 'regression' }} tier (desktop + mobile)
+        run: node scripts/run-suite.js ${{ github.event.inputs.suite == 'full' && 'full' || 'regression' }} all
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
           # Empty MERCHANT runs every slug in ACTIVE_MERCHANTS (merchants/index.js).
           # On the nightly schedule there is no `inputs.merchant`, so this must NOT
           # fall back to a single slug or the other merchants would silently never run.
@@ -119,7 +132,7 @@ jobs:
         run: node ai/analyze-failure.js
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          CLAUDE_MODEL:   claude-3-5-sonnet-20241022
+          CLAUDE_MODEL:   claude-sonnet-5-5
           MERCHANT:       ${{ github.event.inputs.merchant }}
         continue-on-error: true    # Non-fatal if Claude is unavailable
 
@@ -143,7 +156,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-${{ github.run_number }}
-          path: reports/html/
+          path: qc-automation-local/reports/html/
           retention-days: 30
 
       - name: Upload QA evidence and RCA
@@ -152,11 +165,11 @@ jobs:
         with:
           name: qa-evidence-${{ github.run_number }}
           path: |
-            reports/results.json
-            reports/evidence/
-            reports/rca/
-            reports/qa-report.json
-            reports/qa-report.md
+            qc-automation-local/reports/results.json
+            qc-automation-local/reports/evidence/
+            qc-automation-local/reports/rca/
+            qc-automation-local/reports/qa-report.json
+            qc-automation-local/reports/qa-report.md
           retention-days: 30
 
   # ── Visual Regression ────────────────────────────────────────────────────────
@@ -175,6 +188,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: qc-automation-local/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -187,7 +201,8 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'outset' }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
+          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
 
       - name: Upload visual report + screenshots
         uses: actions/upload-artifact@v4
@@ -195,8 +210,8 @@ jobs:
         with:
           name: visual-report-${{ github.run_number }}
           path: |
-            reports/html/
-            test-results/
+            qc-automation-local/reports/html/
+            qc-automation-local/test-results/
           retention-days: 30
 
   # ── Technical Quality ────────────────────────────────────────────────────────
@@ -215,6 +230,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: qc-automation-local/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -227,12 +243,13 @@ jobs:
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'outset' }}
+          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
+          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
 
       - name: Upload technical report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: technical-report-${{ github.run_number }}
-          path: reports/html/
+          path: qc-automation-local/reports/html/
           retention-days: 14

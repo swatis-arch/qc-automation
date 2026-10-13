@@ -1,0 +1,259 @@
+<title>Magnitude Trial Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of a QA test report — verdict first, then evidence (run log, click map), then risks and next steps. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --fg: #1b2129;
+  --muted: #5b6573;
+  --line: #dde1e6;
+  --accent: #1f5f8b;
+  --pass: #1e7a4c;
+  --pass-bg: #e3f3ea;
+  --fail: #b23a2e;
+  --fail-bg: #fbe7e4;
+  --block: #8a6200;
+  --block-bg: #fbf1d6;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161b; --surface: #1a2027; --fg: #e4e8ed; --muted: #9aa5b3; --line: #2c343e;
+    --accent: #7fb6dd; --pass: #6fcf9c; --pass-bg: #173528; --fail: #f08b7f; --fail-bg: #3a1f1c;
+    --block: #e3bd5a; --block-bg: #352c14; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161b; --surface: #1a2027; --fg: #e4e8ed; --muted: #9aa5b3; --line: #2c343e;
+  --accent: #7fb6dd; --pass: #6fcf9c; --pass-bg: #173528; --fail: #f08b7f; --fail-bg: #3a1f1c;
+  --block: #e3bd5a; --block-bg: #352c14; color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.page { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; text-wrap: balance; margin: 0; }
+h1 { font-size: 2.3rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+section { display: grid; gap: 14px; min-width: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.9rem; color: var(--muted); }
+.meta b { color: var(--fg); font-weight: 500; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+
+.verdict { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--fail); border-radius: 6px; padding: 20px 22px; display: grid; gap: 10px; }
+.verdict h2 { font-size: 1.25rem; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 2px; }
+.stat .n { font-family: var(--font-display); font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .l { font-size: 0.85rem; color: var(--muted); }
+
+.checks { display: grid; gap: 10px; }
+.check { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; grid-template-columns: 70px 1fr; gap: 4px 14px; }
+.check .id { font-family: var(--font-mono); font-weight: 500; color: var(--accent); }
+.check p { color: var(--muted); font-size: 0.93rem; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.9rem; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 4px; white-space: nowrap; margin: 1px 2px 1px 0; }
+.pass { color: var(--pass); background: var(--pass-bg); }
+.fail { color: var(--fail); background: var(--fail-bg); }
+.block { color: var(--block); background: var(--block-bg); }
+
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 10px; }
+.figure svg { width: 100%; height: auto; max-width: 100%; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+ul.plain { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 70ch; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card p { font-size: 0.93rem; color: var(--muted); }
+footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.8rem; }
+  .check { grid-template-columns: 1fr; }
+}
+</style>
+
+<main class="page">
+
+  <header style="display:grid;gap:12px">
+    <div class="eyebrow">SUNTEK AI QC · Tool trial</div>
+    <h1>Magnitude Trial Report</h1>
+    <p>Can Magnitude, an AI tool that drives the browser from plain-English steps, take over the fragile parts of our Shopify regression suite? We tried it on the product page of our live stores with every AI model we had access to.</p>
+    <div class="meta">
+      <span>Dates <b>30 Sep – 1 Oct 2026</b></span>
+      <span>Package <b class="mono">magnitude-test 0.3.13</b></span>
+      <span>Stores <b>Abc, Koh</b></span>
+      <span>Runs <b>11</b></span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">Verdict</div>
+    <h2>Not ready for our suite. Do not adopt.</h2>
+    <p>Magnitude read prices correctly, but it never completed a single click step. With every model available to us it clicked outside the browser window or wandered off to unrelated pages. The project behind it has also moved away from testing and ships dependencies with unfixed security issues.</p>
+  </div>
+
+  <div class="stats" aria-label="Summary figures">
+    <div class="stat"><span class="n">11</span><span class="l">trial runs</span></div>
+    <div class="stat"><span class="n">2</span><span class="l">checks passed, both price reads</span></div>
+    <div class="stat"><span class="n">0</span><span class="l">click steps completed</span></div>
+    <div class="stat"><span class="n">4</span><span class="l">AI model routes tried</span></div>
+  </div>
+
+  <section>
+    <h2>What we tested</h2>
+    <p>The same three checks as the earlier Midscene trial, on each store's default product page. The AI does the reading or clicking; a normal code check decides pass or fail, so the AI never grades its own work. Nothing went past Add to Cart.</p>
+    <div class="checks">
+      <div class="check"><span class="id">MAG01</span><div><h3>Read the price</h3><p>AI reads the selling price from the screen; it must match the price our page object reads.</p></div></div>
+      <div class="check"><span class="id">MAG02</span><div><h3>Pick a different variant</h3><p>AI selects another size, colour or pack; the page address must change to the new variant.</p></div></div>
+      <div class="check"><span class="id">MAG03</span><div><h3>Click Add to Cart</h3><p>AI clicks the main Add to Cart button; the store's cart service must accept it (HTTP 200).</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Run log</h2>
+    <p>Store is Abc unless noted. <span class="pill block">BLOCKED</span> means the AI service refused the request, so the check never really ran.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>AI model</th><th>Read price</th><th>Pick variant</th><th>Add to Cart</th><th>What happened</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1–2</td><td>Gemini 3.5 Flash</td><td><span class="pill block">BLOCKED</span></td><td>—</td><td>—</td><td>Free daily quota already used up.</td></tr>
+          <tr><td class="num">3</td><td>Gemini 2.5 Flash</td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td>Google no longer offers this model to new users.</td></tr>
+          <tr><td class="num">4</td><td>Gemini 3.8 Flash</td><td><span class="pill pass">PASS</span></td><td><span class="pill fail">FAIL</span></td><td><span class="pill block">BLOCKED</span></td><td>Price matched. Variant: tool error "browser has been closed". Cart: Gemini overloaded (503).</td></tr>
+          <tr><td class="num">5</td><td>Gemini 3.8 Flash</td><td><span class="pill fail">FAIL</span></td><td><span class="pill fail">FAIL</span></td><td><span class="pill block">BLOCKED</span></td><td>Model's price answer could not be parsed. Same browser error. Gemini overloaded.</td></tr>
+          <tr><td class="num">6</td><td>Gemini 3.8 Flash</td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td>Browser error fixed (one test per file). Then overload, then daily quota used up.</td></tr>
+          <tr><td class="num">7</td><td>Gemini 3.8 Flash</td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td>Quota had not reset yet (resets 12:30 PM IST).</td></tr>
+          <tr><td class="num">8</td><td>Qwen 3.8 27B (OpenRouter, free)</td><td>—</td><td><span class="pill fail">FAIL</span></td><td>—</td><td>About 30 clicks, most below the bottom of the window. Stopped after 10 minutes.</td></tr>
+          <tr><td class="num">9</td><td>Qwen 3.8 27B (OpenRouter, free)</td><td><span class="pill pass">PASS</span> <span class="pill fail">FAIL Koh</span></td><td>—</td><td>—</td><td>Price only. Abc matched (60 s). Koh: AI read $23.59, page object read $39.99 (24 s).</td></tr>
+          <tr><td class="num">10</td><td>GPT-5.4 (OpenAI)</td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td><span class="pill block">BLOCKED</span></td><td>OpenAI account has no credit.</td></tr>
+          <tr><td class="num">11</td><td>Gemini 3.5 Flash (second key)</td><td><span class="pill block">BLOCKED</span></td><td><span class="pill fail">FAIL</span></td><td><span class="pill block">BLOCKED</span></td><td>AI clicked off-screen, searched "sheets", went to the Rugs and Bedding pages, typed "Queen", then used up the day's 20 requests. 8½ minutes.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the AI clicked</h2>
+    <p>Magnitude's browser window is 1024 × 768 pixels. These are the click positions the AI chose while trying to pick a variant on the Abc product page. Points under the dashed line are outside the window, so the click could not land on anything.</p>
+    <div class="figure">
+      <svg viewBox="0 0 560 520" role="img" aria-label="Click positions plotted against the 1024 by 768 browser window. Nine clicks fall below the window's bottom edge.">
+        <!-- scale: 0.5 px per screen px; window 1024x768 -> 512x384, origin (24,24); extra room below to y=880 -->
+        <rect x="24" y="24" width="512" height="384" fill="var(--bg)" stroke="var(--muted)" stroke-width="1.5"/>
+        <rect x="24" y="408" width="512" height="56" fill="var(--fail-bg)" stroke="none"/>
+        <line x1="24" y1="408" x2="536" y2="408" stroke="var(--fail)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="30" y="42" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--muted)">browser window 1024 × 768</text>
+        <text x="30" y="456" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--fail)">outside the window (y &gt; 768)</text>
+        <!-- y axis ticks -->
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)" text-anchor="end">
+          <text x="20" y="28">0</text>
+          <text x="20" y="220">384</text>
+          <text x="20" y="412">768</text>
+          <text x="20" y="460">864</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)" text-anchor="middle">
+          <text x="24" y="482">0</text>
+          <text x="280" y="482">512</text>
+          <text x="536" y="482">1024</text>
+        </g>
+        <!-- OpenRouter Qwen clicks (x/2+24, y/2+24) -->
+        <g fill="var(--block)" stroke="var(--surface)" stroke-width="1">
+          <circle cx="421.5" cy="421.5" r="5"/>
+          <circle cx="421.5" cy="419" r="5"/>
+          <circle cx="421.5" cy="411.5" r="5"/>
+          <circle cx="421.5" cy="429" r="5"/>
+          <circle cx="406.5" cy="416.5" r="5"/>
+          <circle cx="408" cy="351.5" r="5"/>
+          <circle cx="408" cy="384" r="5"/>
+          <circle cx="406.5" cy="374" r="5"/>
+          <circle cx="421.5" cy="221.5" r="5"/>
+          <circle cx="414" cy="351.5" r="5"/>
+        </g>
+        <!-- Gemini (second key) clicks -->
+        <g fill="var(--accent)" stroke="var(--surface)" stroke-width="1">
+          <rect x="415.5" y="413" width="9" height="9"/>
+          <rect x="414" y="414" width="9" height="9"/>
+          <rect x="414" y="449" width="9" height="9"/>
+          <rect x="419" y="449" width="9" height="9"/>
+          <rect x="138.5" y="65.5" width="9" height="9"/>
+        </g>
+        <text x="152" y="74" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--fg)">search box → typed "sheets"</text>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--block)"></i>Qwen 3.8 27B, run 8</span>
+        <span><i class="dot" style="background:var(--accent);border-radius:1px"></i>Gemini 3.5 Flash, run 11 (product page only)</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Findings</h2>
+    <div class="cols">
+      <div class="card"><h3>Reading works</h3><p>On Abc the AI's price matched our page object twice, with two different models. A price check took 24–60 seconds.</p></div>
+      <div class="card"><h3>Clicking does not</h3><p>No click step finished. The models gave click positions outside the 1024 × 768 window, or left the product page and browsed other categories. On a live store that wandering is a risk, not just a failure.</p></div>
+      <div class="card"><h3>Tool bug</h3><p>Version 0.3.13 fails every second test in the same file with "browser has been closed". We worked around it by putting one test in each file.</p></div>
+      <div class="card"><h3>Free AI limits stall it</h3><p>Gemini's free plan allows 20 requests per model per day, and Magnitude spends many requests per step. Most runs were blocked by quota, overload or missing credit rather than by the store.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Compared with Midscene</h2>
+    <p>Same three checks, run the day before with Midscene on Gemini.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Midscene</th><th>Magnitude</th></tr></thead>
+        <tbody>
+          <tr><td>Found a button that was on screen</td><td>3 of 3 times</td><td>0 click steps completed</td></tr>
+          <tr><td>Read the price correctly</td><td>Abc, Orion</td><td>Abc</td></tr>
+          <tr><td>Time per AI step</td><td class="num">12–16 s</td><td>24–60 s to read; clicks never finished (up to 10 min)</td></tr>
+          <tr><td>Stayed on the page it was given</td><td>Yes</td><td>No (went to Rugs and Bedding)</td></tr>
+          <tr><td>Main weakness</td><td>Only sees the visible screen; slow</td><td>Cannot place clicks with the models we have</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Risks in the tool itself</h2>
+    <ul class="plain">
+      <li>The original Magnitude project has moved on to other work. The test package was last released in February 2026 and its documentation site no longer loads.</li>
+      <li>Installing it adds 5 known vulnerabilities (3 high, in the image library it depends on), with no fix available.</li>
+      <li>The link we were given (github.com/ColeMurray/magnitude) is a personal copy of the project with no published package. We used the official package instead.</li>
+      <li>It sends usage data to its makers by default. We switched that off for the trial.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>One useful finding for our suite</h2>
+    <p>On Koh, both Midscene and Magnitude read the price as <b>$23.59</b> and called $39.99 the crossed-out original price. Our page object reads <b>$39.99</b>. Two separate AIs agreeing suggests our Koh price check may be reading the wrong price. This needs a manual look.</p>
+  </section>
+
+  <section>
+    <h2>Recommendation</h2>
+    <ul class="plain">
+      <li><b>Do not adopt Magnitude</b> for the regression suite.</li>
+      <li>Stop the trial and remove it from the project, so the security warnings go with it.</li>
+      <li>Only if the team still wants a final answer: one run with a paid model it was designed for (OpenAI credit of about $5, or an Anthropic key). Given the risks above, we don't think it is worth the spend.</li>
+      <li>Check the Koh price selector.</li>
+    </ul>
+  </section>
+
+  <footer>Trial code: <span class="mono">tests/magnitude/</span> · run with <span class="mono">npm run test:magnitude</span> · Prepared for the SUNTEK AI QC team, 1 Oct 2026.</footer>
+</main>

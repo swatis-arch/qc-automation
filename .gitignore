@@ -1,25 +1,8 @@
-# Dependencies
-node_modules/
-
-# Playwright output
-test-results/
-playwright-report/
-
-# SUNTEK QC reports (generated at runtime -- entire tree, not just top-level
-# JSON files. reports/*.json previously missed reports/rca/*.json and
-# reports/evidence/*.json since a single "*" doesn't cross directories.)
+# Run output created when Playwright / MCP tools run from the repo root
 reports/
+test-results/
+.playwright-mcp/
 
-# Visual regression baselines update diffs
-**/*-actual.png
-**/*-diff.png
-
-# Environment secrets — NEVER commit
-.env
-
-# OS / Editor
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/settings.json
-*.log
+# Local Claude Code state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
