@@ -22,7 +22,7 @@ const VIEWPORTS = ['desktop', 'mobile', 'all'];
 // Passed to Playwright --grep through a shell (scripts/run-suite.js), so keep it to safe characters.
 const GREP_RE   = /^[A-Za-z0-9_@\- ]{1,60}$/;
 
-// Fallback until a Claude key is set: Gemini, using the GOOGLE_API_KEY the Magnitude trial already has.
+// Fallback until a Claude key is set: Gemini, using GOOGLE_API_KEY.
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const GEMINI_MODEL   = process.env.QC_GEMINI_MODEL || 'gemini-3.5-flash';
 
