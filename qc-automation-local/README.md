@@ -106,7 +106,7 @@ triggers the GitHub Actions workflow, and results come back through the same web
 ├── slack-bot/                     ← Cloudflare Worker for the `/qc` slash command
 ├── .claude/commands/              ← /investigate-failure (read-only live diagnosis via Playwright MCP)
 ├── .mcp.json                      ← Playwright MCP server config
-├── .github/workflows/regression.yml
+├── ../.github/workflows/regression.yml  ← CI; lives at the repo root, runs in this folder
 ├── playwright.config.js
 ├── reports/                       ← generated at runtime (git-ignored)
 ├── CLAUDE.md                      ← QA governance + architecture rules
@@ -307,7 +307,7 @@ Some specs are merchant-gated with `test.skip(...)` (e.g. search tests skip when
 | Tune 429 pacing / cooldown | `.env` (`REQUEST_PACING_MS`, `RATE_LIMIT_COOLDOWN_MS`) or `utils/rate-limit.js` |
 | Change the Claude prompt or output shape | `ai/analyze-failure.js` (then check `classify-severity.js` + `generate-report.js`) |
 | Change the Slack message | `notifications/slack.js` |
-| Change CI triggers/suites | `.github/workflows/regression.yml` |
+| Change CI triggers/suites | `../.github/workflows/regression.yml` (repo root) |
 
 Layering rules (locators → elements → page objects → specs) are in [CLAUDE.md](./CLAUDE.md#architecture-locators--business-elements).
 
@@ -330,7 +330,7 @@ Layering rules (locators → elements → page objects → specs) are in [CLAUDE
 
 ## CI/CD
 
-`.github/workflows/regression.yml`:
+[`.github/workflows/regression.yml`](../.github/workflows/regression.yml) at the repo root (GitHub only reads workflows there); its steps run in `qc-automation-local/`:
 
 | Trigger | Suite | Scope |
 |---------|-------|-------|
