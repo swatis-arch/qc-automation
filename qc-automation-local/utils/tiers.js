@@ -25,6 +25,7 @@ const MODULES = {
     checkout:   { file: 'tests/checkout.spec.js',   description: 'Shopify checkout page (stops before order)' },
     technical:  { file: 'tests/technical.spec.js',  description: 'Broken images, JS errors, 5xx, SEO, load time' },
     visual:     { file: 'tests/visual.spec.js',     description: 'Screenshot regression vs baselines' },
+    visualqa:   { file: 'tests/visual-qa.spec.js',  description: 'Design-QA checks with no design file: fonts, contrast, overflow sweep, layout shift' },
 };
 
 // Modules that make up the daily regression run. `technical` holds the shared
@@ -44,7 +45,9 @@ const TIERS = {
     },
     full: {
         description:     'Everything: regression + visual (major releases)',
-        args:            [],   // no filter = every spec
+        // Every registered module. Not "every spec": tests/seed.spec.ts and unreviewed
+        // agent output in tests/generated/ stay out until QA registers them here.
+        args:            Object.values(MODULES).map(m => m.file),
         defaultViewport: 'all',
     },
 };

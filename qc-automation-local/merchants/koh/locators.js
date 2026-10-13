@@ -26,6 +26,9 @@ module.exports = {
     hamburger:      'summary[aria-label*="menu" i], .header__icon--menu, button[aria-label*="menu" i]',
     searchButton:   'button[aria-label*="search" i], button.nav__search-toggler',
     cartIcon:       '#cart-icon-bubble',
+    // Klaviyo "Sitewide Popup" (e.g. "Get your mornings back.", seen 2026-10-11 even headless, a few s after
+    // load). Its X is aria-label "Close dialog"; the MORNINGS / 3PM / BOTH buttons would sign up, so never those.
+    popupClose:     '[data-kl-scroll-locking-modal] button[aria-label="Close dialog"], button.klaviyo-close-form',
     searchForm:     'form[action="/search"]',
     addToCartBtn:   'button[name="add"], .pfp__atc, button.product-form__submit',
     productTitle:   'h1',

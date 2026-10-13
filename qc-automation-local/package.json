@@ -26,14 +26,14 @@
     "generate:report":         "node ai/generate-report.js",
     "notify:slack":            "node notifications/slack.js",
     "qa:report":               "node qa-report.js",
-    "test:ai":                 "node scripts/run-project.js desktop tests/midscene-trial.spec.js",
-    "test:magnitude":          "magnitude --plain"
+    "test:magnitude":          "magnitude --plain",
+    "console":                 "node console/server.js",
+    "console:share":           "ngrok http 4000 --url https://trial-bungee-baked.ngrok-free.dev"
   },
   "keywords": ["playwright", "automation", "qa", "shopify", "regression", "suntek", "claude"],
   "author": "Suntek AI",
   "license": "ISC",
   "devDependencies": {
-    "@midscene/web": "^1.13.3",
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.0.0",
     "magnitude-test": "^0.3.13"

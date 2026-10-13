@@ -101,11 +101,13 @@ async function installPopupGuard(page, merchant, { headed }) {
     const close = closeLocator(page, merchant);
     // noWaitAfter + times: some widgets (e.g. ABC's "Mystery Offer" tab) don't disappear when their
     // X is clicked; without these, Playwright would wait for it to vanish and block the test action.
+    // 10, not fewer: KOH's Klaviyo popup comes back on every page load, and some tests load 5+ pages.
+    // (Re-arming the handler on each navigation instead stalled page.goto — don't do that.)
     await page.addLocatorHandler(close, async () => {
         await close.click({ timeout: 5_000 }).catch(() => {});   // may already be gone
         const st = state.get(page);
         if (st) st.closed = true;
-    }, { noWaitAfter: true, times: 3 });
+    }, { noWaitAfter: true, times: 10 });
 
     // Cover navigations the page objects don't drive (tests calling page.goto directly).
     page.on('domcontentloaded', () => { dismissPopups(page, merchant).catch(() => {}); });

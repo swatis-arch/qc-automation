@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "playwright-test": {
+      "command": "node",
+      "args": [
+        "qc-automation-local/node_modules/@playwright/test/cli.js",
+        "run-test-mcp-server",
+        "-c",
+        "qc-automation-local"
+      ]
+    }
+  }
+}

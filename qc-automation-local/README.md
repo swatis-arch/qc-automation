@@ -51,7 +51,7 @@ triggers the GitHub Actions workflow, and results come back through the same web
 ```
 ├── merchants/                     ← one folder per merchant + the registry
 │   ├── index.js                   ← ACTIVE_MERCHANTS list, loadConfig(), MERCHANT env filter
-│   ├── revitin/  koh/  abc/  orion/
+│   ├── revitin/  koh/  abc/  orion/  laurageller/
 │   │   ├── config.js              ← URLs, page paths, products, feature flags, integrations
 │   │   └── locators.js            ← raw selector strings only (no logic)
 │
@@ -135,7 +135,7 @@ cp .env.example .env     # Windows PowerShell: copy .env.example .env
 
 | Variable | Purpose |
 |----------|---------|
-| `MERCHANT` | Restrict the run to one slug (`revitin`, `koh`, `abc`, `orion`). Blank = all active merchants. |
+| `MERCHANT` | Restrict the run to one slug (`revitin`, `koh`, `abc`, `orion`, `laurageller`). Blank = all active merchants. |
 | `USE_STAGING` | `true` → use each merchant's `urls.staging` instead of `urls.production`. |
 | `CLAUDE_API_KEY` / `CLAUDE_MODEL` | Failure analysis. |
 | `SLACK_WEBHOOK_URL` | Report notification. |
@@ -223,6 +223,53 @@ npm run qa:report           # all four steps in one go; extra args go to `playwr
 
 `npm run qa:report -- --dry-run tests/checkout.spec.js` is the quickest end-to-end check.
 
+### Playwright Test Agents (plan, write and fix tests with AI)
+
+Playwright's planner, generator and healer agents are set up for Claude Code (`.claude/agents/`, `.mcp.json`,
+`specs/`, `tests/seed.spec.ts`). Open this folder in Claude Code, approve the `playwright-test` MCP server, then ask
+for example: *"Use the playwright-test-planner agent to plan tests for the KOH bundle builder"*. Plans go to `specs/`
+and generated tests to `tests/generated/`, outside the tiers until QA reviews them. Rules: CLAUDE.md →
+"Playwright Test Agents". Re-running `npx playwright init-agents` overwrites `.mcp.json`, so keep the `playwright` entry.
+
+### 6. QC Console (team web page)
+
+A web page where anyone on the team types a command, this machine runs it, and every run's results are kept.
+Full guide (how it was built, starting it, using it): [docs/qc-console-guide.md](docs/qc-console-guide.md).
+
+```bash
+npm run console          # http://localhost:4000 — prints the access key
+npm run console:share    # second terminal: https://trial-bungee-baked.ngrok-free.dev (fixed ngrok domain)
+```
+
+`console\start-console.cmd` starts both in minimised windows. To start them at every Windows login, put a
+shortcut to it in the Startup folder (`Win+R` → `shell:startup`). ngrok's free plan shows a one-time
+"Visit Site" warning page to each new visitor.
+
+- **Commands**: `run smoke koh`, `run pdp abc mobile`, `run technical orion SITE001`, `status`, `cancel`.
+  With `CLAUDE_API_KEY` set (or, as a fallback, `GOOGLE_API_KEY` for Gemini, model `QC_GEMINI_MODEL`,
+  default gemini-3.5-flash; the free tier allows only a few requests a day), plain English works too ("check the cart on KOH phones",
+  "why did the checkout tests fail?"). Without it, the keyword parser above is used.
+- **Jira**: `test KOH-68` (or the ticket link) reads the ticket, runs the matching tests, and offers a
+  **Post result to KOH-68** button when the run finishes. Needs `JIRA_EMAIL` / `JIRA_API_TOKEN` in `.env`.
+- **What the AI can do**: pick a tier/module, merchant, viewport and title filter, and explain failures from the
+  run data. Every plan is checked against `utils/tiers.js` and `ACTIVE_MERCHANTS` before it runs, and it can't
+  edit code. `full`, and `regression` without a filter, wait for a click to confirm.
+- **PDF and Slack**: when a run finishes (passed or failed), the console runs the same steps as `npm run qa:report`
+  (RCA → `qa-report`), writes `report.pdf` (summary, each failure with its error, the AI's probable cause and a
+  screenshot, then every test), and posts to Slack. The message says who triggered the run and links to the
+  report and the PDF through `QC_CONSOLE_PUBLIC_URL`. Rebuild a run's PDF with `node console/pdf-report.js <runId>`. Before each run, old `reports/evidence` and `reports/rca` files are
+  moved to `reports/console/archived-evidence/` so they don't leak into the new report.
+  Set `QC_CONSOLE_SLACK=false` to turn this off.
+- **Runs** go one at a time through `scripts/run-suite.js`. Don't run Playwright from a terminal while the
+  console is running a test: both write `reports/results.json`.
+- **Data** is in `reports/console/`: `runs.json` (index), `runs/<id>/` (`log.txt`, `results.json`, `html/` report,
+  `report.pdf`, `qa-report.{json,md}`, `shots/` failure screenshots)
+  and `commands.jsonl` (who typed what).
+- **Access**: everyone needs `QC_CONSOLE_KEY` (set it in `.env`; if it's blank, a new key is generated at each
+  start). The server listens on 127.0.0.1 only, so it's reachable through the tunnel and not on the LAN.
+- **Tunnel**: ngrok (`winget install --id Ngrok.Ngrok`, then `ngrok update` and `ngrok config add-authtoken …`).
+  The link works only while this PC is on and both windows are running.
+
 ## Merchants
 
 | Slug | Site | Subscriptions | Reviews |
@@ -231,6 +278,7 @@ npm run qa:report           # all four steps in one go; extra args go to `playwr
 | `koh` | kreaturesofhabit.com | Skio | Junip |
 | `abc` | abchome.com | — | Yotpo |
 | `orion` | oriontelescopes.myshopify.com (password-protected — set `ORION_STOREFRONT_PASSWORD`) | — | Judge.me |
+| `laurageller` | laurageller.com | — | Okendo |
 
 Some specs are merchant-gated with `test.skip(...)` (e.g. search tests skip when `features.search` is false).
 

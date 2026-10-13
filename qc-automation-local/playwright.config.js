@@ -53,7 +53,6 @@
 require('dotenv').config();
 
 const { defineConfig, devices } = require('@playwright/test');
-const { midsceneConfigured }    = require('./utils/midscene-env');
 
 // Inline JSDoc cast: equivalent to TypeScript's `as MerchantConfig[]`.
 // A line-level @type annotation won't work here because TypeScript sees
@@ -132,11 +131,6 @@ module.exports = defineConfig({
         ['html', { open: 'never', outputFolder: 'reports/html' }],
         ['json', { outputFile: 'reports/results.json' }],
         ['list'],
-        // Midscene AI trial: step-by-step replay report in midscene_run/report/.
-        // Only added when a Midscene model is configured (see utils/midscene-env.js).
-        ...(midsceneConfigured
-            ? [['@midscene/web/playwright-reporter', { type: 'merged' }]]
-            : []),
     ],
 
     // -- Shared settings (no baseURL here -- each project sets its own) -------

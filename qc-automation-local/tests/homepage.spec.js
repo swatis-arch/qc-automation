@@ -33,16 +33,13 @@
  */
 
 const { test, expect }             = require('../fixtures/base');
-const { expectPageFound, horizontalOverflow, parseMoney } = require('../utils/page-checks');
+const { expectPageFound, horizontalOverflow, parseMoney, PLACEHOLDER_TEXT, BROKEN_TEMPLATE } = require('../utils/page-checks');
 const { captureConsoleErrors }     = require('../utils/console');
 const { captureNetworkFailures }   = require('../utils/network');
 const { checkLinks }               = require('../utils/link-check');
 const { SEO_LIMITS }               = require('../utils/test-data');
 const url                          = require('url');
 
-// Text that means a template was published unfinished.
-const PLACEHOLDER_TEXT = /lorem ipsum|dolor sit amet|your (text|heading|title|content) here|\{\{[^}]*\}\}|\[object Object\]/i;
-const BROKEN_TEMPLATE  = /\bundefined\b|\bNaN\b/;
 
 // Footer policy links (sheet: Privacy, Refund, Shipping, Terms). "Refund" also accepts
 // "Return" — some stores publish one combined "Shipping & Return Policy".

@@ -80,4 +80,9 @@ function imageKey(src) {
         .toLowerCase();
 }
 
-module.exports = { expectPageFound, getMetaDescription, canonicalLink, horizontalOverflow, parseMoney, imageKey, NOT_FOUND };
+// Leftover template/demo text: lorem ipsum, Shopify's default section copy ("Talk about your
+// brand", "Example product title"), unrendered Liquid/JS values.
+const PLACEHOLDER_TEXT = /lorem ipsum|dolor sit amet|your (text|heading|title|content) here|example product( title)?\b|talk about your brand|\{\{[^}]*\}\}|\[object Object\]/i;
+const BROKEN_TEMPLATE  = /\bundefined\b|\bNaN\b/;
+
+module.exports = { expectPageFound, getMetaDescription, canonicalLink, horizontalOverflow, parseMoney, imageKey, NOT_FOUND, PLACEHOLDER_TEXT, BROKEN_TEMPLATE };

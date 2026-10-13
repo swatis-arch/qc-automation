@@ -19,7 +19,7 @@
 const VALID_SUITES = ['smoke', 'regression', 'full', 'visual', 'technical'];
 
 // Keep in sync with ACTIVE_MERCHANTS in merchants/index.js
-const VALID_MERCHANTS = ['revitin', 'koh', 'abc', 'orion'];   // keep in sync with ACTIVE_MERCHANTS
+const VALID_MERCHANTS = ['revitin', 'koh', 'abc', 'orion', 'laurageller'];   // keep in sync with ACTIVE_MERCHANTS
 
 export default {
   async fetch(request, env) {

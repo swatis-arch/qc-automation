@@ -164,7 +164,10 @@ function buildSlackPayload(report) {
 
     // ── Footer ────────────────────────────────────────────────────────────────
     blocks.push({ type: 'divider' });
-    const triggeredByText = report.triggeredBy ? ` | Triggered by ${report.triggeredBy}` : '';
+    const triggeredByText = (report.triggeredBy ? ` | Triggered by ${report.triggeredBy}` : '') +
+        // Set by the QC Console: link to this run's Playwright report.
+        (process.env.QC_REPORT_URL ? ` | <${process.env.QC_REPORT_URL}|Open report>` : '') +
+        (process.env.QC_PDF_URL ? ` | <${process.env.QC_PDF_URL}|Download PDF>` : '');
     blocks.push({
         type: 'context',
         elements: [{

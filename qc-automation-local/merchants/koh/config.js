@@ -32,6 +32,7 @@ module.exports = {
         search:      '/search?q=oats',        // Site has no search UI — see features.search
         cart:        '/cart',
         account:     '/a/account/login',       // Custom account app, not the default Shopify /account
+        bundleBuilder: '/pages/bundle-builder', // "Bundle & Save": Protein Bar + Meal One, 2-box minimum
     },
 
     // -- Representative products -------------------------------------------------

@@ -25,6 +25,7 @@ See [README.md](./README.md) for setup, commands, and CI.
 | `ai/` | Claude RCA (`analyze-failure.js`), severity maps, report generator | Advisory only — see AI Layer Rules |
 | `notifications/slack.js` | Slack report | |
 | `slack-bot/` | Cloudflare Worker for the `/qc` slash command (own `package.json`) | Keep `VALID_MERCHANTS` in sync with `ACTIVE_MERCHANTS` |
+| `console/` | QC Console web page (`npm run console`): typed commands → validated run plan → `scripts/run-suite.js`; data in `reports/console/` | AI only picks a plan; `validatePlan()` in `console/ai.js` is the gate. No code edits from the console |
 | `utils/tiers.js` | Tier (smoke/regression/full) + module definitions | Register new specs here; `scripts/run-suite.js` consumes it |
 | `utils/popups.js` | Closes marketing popups before each test proceeds (auto `popupGuard` fixture + page-object navigation) | Never add per-test popup code; flag `features.popup` per merchant; cookie bars are not auto-accepted |
 | `utils/rate-limit.js` | Cloudflare 429 guard (pacing + cooldown), used by the auto `rateLimitGuard` fixture | Don't add ad-hoc `waitForTimeout` to dodge 429s |
@@ -78,6 +79,26 @@ Before touching any test code, determine:
 - Never commit `.env`, API keys, webhook URLs, passwords, or credentials.
 - All secrets live in `.env` locally and GitHub Secrets in CI.
 - Rotate any accidentally committed secret immediately.
+
+---
+
+## Playwright Test Agents
+
+Set up with `npx playwright init-agents --loop=claude`: `.claude/agents/playwright-test-{planner,generator,healer}.md`,
+the `playwright-test` MCP server in `.mcp.json`, plans in `specs/`, seed `tests/seed.spec.ts`.
+
+- **Planner** explores a merchant site and saves a Markdown plan to `specs/<merchant>-<area>.md`.
+- **Generator** turns plan items into tests. **Healer** debugs and fixes failing tests.
+- Run them against one merchant: pass `--project=<slug>-desktop-chromium` / `MERCHANT=<slug>`; the seed uses `fixtures/base`.
+
+Rules for agent-written tests (on top of everything above):
+- Save new tests to `tests/generated/<area>.spec.ts`. They stay out of the tiers until QA reviews them and moves the
+  cases into the real spec and registers them in `utils/tiers.js`.
+- Import `{ test, expect }` from `fixtures/base`, use the `merchant` fixture and page objects. No merchant URLs, product
+  handles or selectors inline — add them to `merchants/<slug>/config.js` / `locators.js`.
+- Never submit forms that create data (contact, newsletter, wholesale, account) and never place an order.
+- The healer may fix selectors and waits. It must not weaken an assertion to make a test pass, and must report
+  (not hide) failures that look like real site bugs — see "When Modifying a Failing Test".
 
 ---
 

@@ -1,0 +1,8 @@
+# Run output created when Playwright / MCP tools run from the repo root
+reports/
+test-results/
+.playwright-mcp/
+
+# Local Claude Code state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

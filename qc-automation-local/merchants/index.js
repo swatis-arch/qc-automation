@@ -28,6 +28,7 @@ const ACTIVE_MERCHANTS = [
     'koh',
     'abc',
     'orion',   // Theme-preview URL for now — see merchants/orion/config.js
+    'laurageller',
 ];
 
 // -- Load & validate configs --------------------------------------------------
