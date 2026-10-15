@@ -20,7 +20,7 @@
 
 const { spawnSync } = require('child_process');
 require('dotenv').config();
-const { MODULES, TIERS, TICKET } = require('../utils/tiers');
+const { MODULES, TIERS, TICKET, STORE } = require('../utils/tiers');
 
 const PROJECT_GLOB = {
     desktop: '*-desktop-chromium',
@@ -43,7 +43,8 @@ if (!name || name === '--list') {
 }
 
 const tier   = TIERS[name];
-const mod    = MODULES[name] || (name === 'ticket' ? TICKET : null);   // ticket: needs QC_TICKET_CHECKS
+// ticket: needs QC_TICKET_CHECKS; store: needs QC_ADHOC_BASE_URL
+const mod    = MODULES[name] || { ticket: TICKET, store: STORE }[name] || null;
 if (!tier && !mod) {
     console.error(`Unknown tier/module "${name}".\n`);
     printList();
@@ -62,8 +63,8 @@ if (watch) {
 const target   = tier ? tier.args : [mod.file];
 const project  = viewport === 'all' ? [] : [`"--project=${PROJECT_GLOB[viewport]}"`];
 
-// shell:true joins args into one string, so quote anything with spaces or a leading '@'.
-const quote = a => (/\s|^@/.test(a) ? `"${a}"` : a);
+// shell:true joins args into one string, so quote anything with spaces, a leading '@' or shell characters.
+const quote = a => (/[\s|&<>^()]|^@/.test(a) ? `"${a}"` : a);
 const args  = ['playwright', 'test', ...project, ...[...target, ...extra].map(quote)];
 console.log(`$ npx ${args.join(' ')}`);
 

@@ -5,9 +5,9 @@
  * Its URL comes from QC_ADHOC_BASE_URL, set only for that console run (see console/server.js);
  * playwright.config.js then builds adhoc-* projects and nothing else.
  *
- * Not in ACTIVE_MERCHANTS: no tier ever runs it. Only ticket checks on the homepage and on paths
- * named in the ticket run here (utils/ticket-checks.js): no products, cart or checkout, because
- * those need a real merchant config and verified locators.
+ * Not in ACTIVE_MERCHANTS: no tier ever runs it. Only ticket checks run here (utils/ticket-checks.js),
+ * and with no verified locators they use Shopify's standard storefront URLs instead of the page objects
+ * (/collections/all, /products.json, /cart/add.js, /cart, /checkout).
  */
 
 const base = process.env.QC_ADHOC_BASE_URL || 'https://example.com';

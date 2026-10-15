@@ -95,8 +95,7 @@ async function getIssue(key) {
     const data = await api(`/issue/${encodeURIComponent(key)}?fields=${fields}`);
     const f = data.fields || {};
     const description = adfToText(f.description).replace(/\n{3,}/g, '\n\n').trim().slice(0, 6000);
-    const links = [...new Set(`${f.summary || ''}\n${description}`.match(/https?:\/\/[^\s)\]>"'|]+/g) || [])]
-        .map(u => u.replace(/[.,;:!?]+$/, ''));
+    const links = linksOf(`${f.summary || ''}\n${description}`);
     return {
         key,
         url:         browseUrl(key),
@@ -140,6 +139,28 @@ async function searchTickets(jql, max = 25) {
     }));
 }
 
+const linksOf = text => [...new Set(text.match(/https?:\/\/[^\s)\]>"'|]+/g) || [])].map(u => u.replace(/[.,;:!?]+$/, ''));
+
+const projectLinkCache = new Map();
+
+/**
+ * Every link in the newest `max` tickets of a project (summary and description), one entry per ticket
+ * per link, so a store linked from many tickets appears many times. Used to find a project's storefront
+ * when a ticket has no link of its own. Cached per project while the console runs.
+ */
+async function projectLinks(project, max = 60) {
+    if (!/^[A-Z][A-Z0-9]{0,9}$/.test(project)) return [];
+    if (!projectLinkCache.has(project)) {
+        const q = new URLSearchParams({ jql: `project = ${project} ORDER BY updated DESC`, maxResults: String(max), fields: 'summary,description' });
+        const data = await api(`/search/jql?${q}`);
+        projectLinkCache.set(project, (data.issues || []).flatMap(i => {
+            const f = i.fields || {};
+            return linksOf(`${f.summary || ''}\n${adfToText(f.description)}`);
+        }));
+    }
+    return projectLinkCache.get(project);
+}
+
 /** Post a plain-text comment (paragraph per line). */
 async function addComment(key, text) {
     const body = {
@@ -151,4 +172,4 @@ async function addComment(key, text) {
     return api(`/issue/${encodeURIComponent(key)}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
 }
 
-module.exports = { configured, findTicketKey, merchantForKey, browseUrl, getIssue, addComment, testingStatuses, searchTickets, PROJECT_MAP };
+module.exports = { configured, findTicketKey, merchantForKey, browseUrl, getIssue, addComment, testingStatuses, searchTickets, projectLinks, PROJECT_MAP };

@@ -21,6 +21,7 @@ See [README.md](./README.md) for setup, commands, and CI.
 | `core/<feature>/` | Page objects (`HomePage`, `Navbar`, `PLPPage`, `PDPPage`, `CartPage`, `CheckoutPage`) | Public API the specs call. `discount/`, `subscription/`, `visual/` are empty placeholders |
 | `fixtures/base.js` | `test.extend()` fixtures; specs import `{ test, expect }` from here, never from `@playwright/test` | Fixtures are merchant-agnostic |
 | `tests/generated/<suite>/` | The only specs that run: written by the Playwright Test Agents. `@smoke` in a title puts a test in the fast suite | No merchant-specific data inline |
+| `tests/ticket-checks.spec.js`, `tests/store-regression.spec.js` | QC Console only: checks from a Jira ticket, and regression on a store not set up in the suite (`merchants/adhoc`, `utils/shopify-store.js`). Inert in tier runs | Merchant-agnostic; never submit forms or place orders |
 | `tests/_archive/` | Retired hand-written specs + visual baselines (since 2026-10-14). Ignored by `playwright.config.js` | Don't edit; `git mv` back to `tests/` to revive (see its README) |
 | `utils/` | console/network capture, screenshots, failure evidence, shared test data | Evidence is written to `reports/evidence/` |
 | `ai/` | Claude RCA (`analyze-failure.js`), severity maps, report generator | Advisory only — see AI Layer Rules |

@@ -18,7 +18,7 @@ const file = process.env.QC_TICKET_CHECKS;
 const data = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
 
 if (data) {
-    const checks = validateChecks(data.checks, { adhoc: Boolean(process.env.QC_ADHOC_BASE_URL) });
+    const checks = validateChecks(data.checks);
 
     test.describe(`${data.key} — ${data.summary || 'ticket checks'}`, () => {
         checks.forEach((check, i) => {

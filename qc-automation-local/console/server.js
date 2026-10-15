@@ -144,11 +144,12 @@ function pump() {
         const t = run.ticket || {};
         fs.writeFileSync(checksFile, JSON.stringify({ key: t.key || 'ticket', summary: t.summary || '', checks: run.plan.checks }, null, 2));
         env.QC_TICKET_CHECKS = checksFile;
-        if (run.plan.merchant === 'adhoc') {
-            // A store from the ticket's link: playwright.config.js then builds adhoc-* projects only.
-            env.MERCHANT = '';
-            env.QC_ADHOC_BASE_URL = run.plan.storeUrl;
-        }
+    }
+    if (run.plan.merchant === 'adhoc') {
+        // A store the suite isn't set up for (ticket checks or tests/store-regression.spec.js):
+        // playwright.config.js then builds adhoc-* projects only.
+        env.MERCHANT = '';
+        env.QC_ADHOC_BASE_URL = run.plan.storeUrl;
     }
     archiveOldEvidence(run.id);
     const child = spawn(process.execPath, args, { cwd: ROOT, env, detached: process.platform !== 'win32' });

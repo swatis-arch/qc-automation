@@ -62,4 +62,8 @@ const TIERS = {
 const TICKET = { file: 'tests/ticket-checks.spec.js', description: 'Checks derived from a Jira ticket (QC Console only)' };
 TICKET.available = () => fs.existsSync(path.join(ROOT, TICKET.file));
 
-module.exports = { MODULES, REGRESSION_MODULES, TIERS, TICKET };
+// Regression on a store the suite isn't set up for (QC_ADHOC_BASE_URL). Runnable as `run-suite.js store`,
+// but not a module: it skips itself on configured merchants.
+const STORE = { file: 'tests/store-regression.spec.js', description: 'Regression on a Shopify store not set up in the suite (QC Console only)' };
+
+module.exports = { MODULES, REGRESSION_MODULES, TIERS, TICKET, STORE };

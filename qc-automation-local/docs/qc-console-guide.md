@@ -75,6 +75,17 @@ To start it automatically at Windows login, press `Win + R`, type `shell:startup
 3. Watch the live log. When the run finishes, use **PDF report**, **Open Playwright report**, or **Ask AI why** on a failure.
 4. The Slack channel gets the summary with links. Clicking them asks for the access key once.
 
+A store the suite isn't set up for can be tested without a ticket. `regression on rydertoys.com` (or just
+`rydertoys` once a ticket has run there) runs `tests/store-regression.spec.js`: about 30 checks on Shopify's standard
+pages and JSON — homepage (title, logo, header/footer links, images, server errors), search, collections (listing,
+sorting, paging), product page (title and price, images, variants, sold-out, add to cart, SEO data), cart (contents,
+quantity, remove, empty cart), checkout (opens with the product), policy/contact/404/login pages, robots.txt and
+sitemap, load time, page width and the mobile menu. Desktop and mobile take 15–20 min; add `desktop` or `mobile` for
+one. `quick check rydertoys.com` runs only five checks (home, collection, product, cart, checkout open and work).
+Jira tickets asking for a regression of such a store (e.g. "Regression testing Ryder toys") run the same suite.
+Nothing is submitted and no order is placed. With no config or verified selectors, a failure is a lead for QA to
+confirm, not a verdict: the theme may simply do something differently.
+
 Typical run times: one test < 1 min · one module 5–20 min · smoke 5–15 min · KOH desktop regression ~1.5–2 h ·
 KOH full (desktop + mobile, 582 tests) ~3.5–4 h. Runs queue one after another.
 
@@ -99,17 +110,22 @@ Type `test KOH-68`, or paste the ticket link. The console then works like this:
 
 1. **Reads the ticket** (summary, description, acceptance criteria, links) with the account in `JIRA_EMAIL` /
    `JIRA_API_TOKEN`. Any project works; a bare key needs "test" (or "check", "ticket") in the message.
-2. **Works out the store**, in this order: the merchant you typed (`test PB-795 on koh`); the project in
-   `JIRA_PROJECT_MAP` (`KOH=koh,ABC=abc,REV=revitin`); the store's name or domain in the ticket, or a link to it.
+2. **Works out the store**, in this order: the merchant or store you typed (`test PB-795 on koh`,
+   `test RYD-44 on rydertoys.com`); the project in `JIRA_PROJECT_MAP` (`KOH=koh,ABC=abc,REV=revitin`); the store's
+   name or domain in the ticket, or a link to it; the configured merchant the project's other tickets mostly link to
+   (ASB tickets → laurageller).
    For a store the suite isn't set up for, it uses the project's URL in `JIRA_PROJECT_MAP`
-   (e.g. `RYD=https://rydertoys.com`) or a storefront link in the ticket (Figma, Google Docs, Air, Shopify admin
-   and similar links are ignored). Such stores get text and price checks only, on the homepage and the pages the
-   ticket links to: product, cart and checkout flows need a merchant config. With no store found, the console says
-   so and the ticket is not tested.
+   (e.g. `RYD=https://rydertoys.com`), a storefront link in the ticket (Figma, Google Docs, Air, Shopify admin
+   and similar links are ignored), the store the project's last ticket ran on, or the store other tickets in the
+   project link to most (only hosts that answer as a Shopify store). Such stores have no config or locators, so
+   checks use Shopify's standard pages: `/collections/all`, the first in-stock product (or one the ticket links to),
+   `/cart/add.js`, `/cart` and `/checkout`. With no store found, the console says so and the ticket is not tested.
 3. **Turns the acceptance criteria into ticket checks** (with Claude). Each check comes from a fixed menu, on one
    page (home, collection, product, cart, checkout):
    - *text shown* / *text not shown*, e.g. "41% OFF" on the homepage;
-   - *discount*: a price on the page is N% below the price shown next to it (±1 point), e.g. $39.99 → $23.59.
+   - *discount*: a price on the page is N% below the price shown next to it (±1 point), e.g. $39.99 → $23.59;
+   - *page works*: the page opens and does its job (collection lists products, product has an add-to-cart button,
+     cart holds the product, checkout opens). Regression / whole-flow / go-live tickets get one per page.
    Cart and checkout checks add the default product first; checkout stops on the checkout page, nothing is filled
    in and no order is placed. Criteria these checks can't decide are listed under **Check by hand**. The checks are
    validated before the run is queued and again by `tests/ticket-checks.spec.js`, which runs one test per check;

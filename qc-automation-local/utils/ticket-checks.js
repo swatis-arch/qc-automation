@@ -11,11 +11,15 @@
  *   text_absent       the page does not show `text`
  *   discount_percent  a price on the page is `percent`% below the price shown next to it
  *                     (e.g. $59.00 → $34.81 is 41% off), within `tolerance` points (default 1)
+ *   page_works        the page opens and does its job: collection lists products, product has an
+ *                     add-to-cart button, cart holds the added product, checkout opens
  *
  * Pages: home, collection, product, cart (default product added), checkout (stops before any order),
  * url (`path`, any page on the store, e.g. "/pages/bundle-builder").
  * `product` optionally names a product handle on the merchant's own store.
- * Ad-hoc stores (merchants/adhoc, from a ticket link) only allow home and url.
+ * Ad-hoc stores (merchants/adhoc: no config or locators) use Shopify's standard storefront instead of
+ * the page objects: /collections/all, the first in-stock product from /products.json (or `product`),
+ * /cart/add.js, then /cart or /checkout.
  */
 
 const HomePage     = require('../core/homepage/HomePage');
@@ -24,10 +28,10 @@ const PDPPage      = require('../core/pdp/PDPPage');
 const CartPage     = require('../core/cart/CartPage');
 const CheckoutPage = require('../core/checkout/CheckoutPage');
 const { dismissPopups } = require('./popups');
+const { findProduct, addToCart } = require('./shopify-store');
 
-const CHECK_TYPES = ['text_visible', 'text_absent', 'discount_percent'];
+const CHECK_TYPES = ['text_visible', 'text_absent', 'discount_percent', 'page_works'];
 const PAGES       = ['home', 'collection', 'product', 'cart', 'checkout', 'url'];
-const ADHOC_PAGES = ['home', 'url'];
 const MAX_CHECKS  = 12;
 const HANDLE_RE   = /^[a-z0-9][a-z0-9-]{0,99}$/;
 // A path on the store itself: no scheme, host, "..", or characters a URL would need escaping for.
@@ -37,22 +41,20 @@ const PATH_RE     = /^\/(?!\/)[A-Za-z0-9\-._~/%]{0,200}(\?[A-Za-z0-9\-._~=&%+]{0
 
 /**
  * @param {unknown} list  checks as returned by the AI (or sent back by the UI)
- * @param {{adhoc?: boolean}} [opts]  adhoc: the store comes from a ticket link (home and url pages only)
  * @returns {{title: string, type: string, page: string, text: string|null, percent: number|null, tolerance: number, product: string|null, path: string|null}[]}
  */
-function validateChecks(list, { adhoc = false } = {}) {
+function validateChecks(list) {
     if (!Array.isArray(list) || !list.length) throw new Error('A ticket run needs at least one check.');
     if (list.length > MAX_CHECKS) throw new Error(`At most ${MAX_CHECKS} checks per ticket.`);
     return list.map((c, i) => {
         const n = `Check ${i + 1}`;
         if (!c || typeof c !== 'object') throw new Error(`${n} is not an object.`);
         if (!CHECK_TYPES.includes(c.type)) throw new Error(`${n}: unknown type "${c.type}". Use one of: ${CHECK_TYPES.join(', ')}`);
-        const pages = adhoc ? ADHOC_PAGES : PAGES;
-        if (!pages.includes(c.page)) throw new Error(`${n}: page "${c.page}" can't be checked here. Use one of: ${pages.join(', ')}`);
+        if (!PAGES.includes(c.page)) throw new Error(`${n}: page "${c.page}" can't be checked here. Use one of: ${PAGES.join(', ')}`);
         const title = String(c.title || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
         if (!title) throw new Error(`${n} has no title.`);
 
-        const product = !adhoc && c.product ? String(c.product).trim().toLowerCase() : null;
+        const product = c.product ? String(c.product).trim().toLowerCase() : null;
         if (product && !HANDLE_RE.test(product)) throw new Error(`${n}: "${product}" is not a product handle.`);
 
         let path = null;
@@ -65,7 +67,7 @@ function validateChecks(list, { adhoc = false } = {}) {
         if (c.type === 'discount_percent') {
             percent = Number(c.percent);
             if (!(percent >= 1 && percent <= 99)) throw new Error(`${n}: percent must be between 1 and 99.`);
-        } else {
+        } else if (c.type !== 'page_works') {
             text = String(c.text || '').replace(/\s+/g, ' ').trim();
             if (!text || text.length > 80) throw new Error(`${n}: text must be 1-80 characters.`);
         }
@@ -76,33 +78,39 @@ function validateChecks(list, { adhoc = false } = {}) {
 
 // ── Running ───────────────────────────────────────────────────────────────────
 
+const CHECKOUT_URL = /checkout\.shopify\.com|\/checkouts\/|shop\.app/;
+const only = locator => () => [locator];
+
+/** Shopify checkout frames: extensions (e.g. a subscription app's order summary) render in iframes. */
+const checkoutRoots = page => () => page.frames().filter(f => !f.isDetached()).map(f => f.locator('body'));
+
 /**
- * Open `check.page` and return a function giving the locators whose text the check reads
- * (a function, because checkout frames keep loading after the page does).
+ * Open `check.page` and return { roots, product }: roots gives the locators whose text the check reads
+ * (a function, because checkout frames keep loading after the page does); product is the title of the
+ * product added to the cart, when the store has no config (null otherwise).
  */
 async function openPage(check, { page, merchant }) {
+    if (merchant.adhoc) return openShopifyPage(check, { page, merchant });
     const handle = check.product || (merchant.products.default && merchant.products.default.handle);
-    const only = locator => () => [locator];
+    const opened = roots => ({ roots, product: null });
     switch (check.page) {
         case 'url': {
-            const res = await page.goto(check.path, { waitUntil: 'domcontentloaded' });
-            if (res && res.status() >= 400) throw new Error(`${check.path} returned HTTP ${res.status()}`);
-            await dismissPopups(page, merchant);
-            return only(page.locator('body'));
+            await open(page, merchant, check.path);
+            return opened(only(page.locator('body')));
         }
         case 'home': {
             await new HomePage(page, merchant).navigate();
-            return only(page.locator('body'));
+            return opened(only(page.locator('body')));
         }
         case 'collection': {
             const plp = new PLPPage(page, merchant);
             await plp.navigateTo(merchant.pages.collection.replace(/^\/collections\//, ''));
             await plp.waitForProducts();
-            return only(page.locator('main').first());
+            return opened(only(page.locator('main').first()));
         }
         case 'product': {
             await new PDPPage(page, merchant).navigateTo(handle);
-            return only(page.locator('main').first());
+            return opened(only(page.locator('main').first()));
         }
         case 'cart':
         case 'checkout': {
@@ -111,19 +119,81 @@ async function openPage(check, { page, merchant }) {
             await pdp.navigateTo(handle);
             await pdp.addToCart();
             await cart.waitForDrawerOpen();
-            if (check.page === 'cart') return only(page.locator('body'));
+            if (check.page === 'cart') return opened(only(page.locator('body')));
             // Stops on the checkout page: nothing is filled in and no order is placed. Shopify checkout's
             // "load" event can take well over 20 s, so wait for the DOM and then the form instead.
             await Promise.all([
-                page.waitForURL(/checkout\.shopify\.com|\/checkouts\/|shop\.app/, { waitUntil: 'domcontentloaded', timeout: 30_000 }),
+                page.waitForURL(CHECKOUT_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 }),
                 cart.checkoutButton.click(),
             ]);
             await new CheckoutPage(page).waitForCheckoutLoad();
-            // Checkout extensions (e.g. the subscription app's order summary) render in iframes.
-            return () => page.frames().filter(f => !f.isDetached()).map(f => f.locator('body'));
+            return opened(checkoutRoots(page));
         }
     }
     throw new Error(`Unknown page "${check.page}"`);
+}
+
+/** Go to a path on the store; fail on an HTTP error. */
+async function open(page, merchant, path) {
+    const res = await page.goto(path, { waitUntil: 'domcontentloaded' });
+    if (res && res.status() >= 400) throw new Error(`${path} returned HTTP ${res.status()}`);
+    await dismissPopups(page, merchant);
+}
+
+/** A product on a store with no config: `handle` (from the ticket's links), else the first one in stock. */
+const shopifyProduct = (page, handle) => findProduct(page, { handle });
+
+/** openPage() for a store with no config or locators, through Shopify's standard storefront URLs. */
+async function openShopifyPage(check, { page, merchant }) {
+    const body = only(page.locator('body'));
+    switch (check.page) {
+        case 'home':       await open(page, merchant, '/');                 return { roots: body, product: null };
+        case 'url':        await open(page, merchant, check.path);          return { roots: body, product: null };
+        case 'collection': await open(page, merchant, '/collections/all');  return { roots: body, product: null };
+        case 'product': {
+            const p = await shopifyProduct(page, check.product);
+            await open(page, merchant, `/products/${p.handle}`);
+            return { roots: body, product: p.title };
+        }
+        case 'cart':
+        case 'checkout': {
+            await open(page, merchant, '/');   // the store's cookies first, so the cart sticks to this browser
+            const p = await shopifyProduct(page, check.product);
+            await addToCart(page, p.variantId);
+            if (check.page === 'cart') {
+                await open(page, merchant, '/cart');
+                return { roots: body, product: p.title };
+            }
+            // Stops on the checkout page: nothing is filled in and no order is placed.
+            await page.goto('/checkout', { waitUntil: 'domcontentloaded' });
+            await page.waitForURL(CHECKOUT_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+            await new CheckoutPage(page).waitForCheckoutLoad();
+            return { roots: checkoutRoots(page), product: p.title };
+        }
+    }
+    throw new Error(`Unknown page "${check.page}"`);
+}
+
+/** What "the page works" means for each page, beyond opening without an HTTP error. */
+async function expectPageWorks(check, { page, expect, product, roots }) {
+    switch (check.page) {
+        case 'collection':
+            await expect(page.locator('a[href*="/products/"]:visible').first(), 'the collection page lists products').toBeVisible({ timeout: 15_000 });
+            return;
+        case 'product':
+            await expect(page.locator('form[action*="/cart/add"] button:visible, form[action*="/cart/add"] [type="submit"]:visible').first(),
+                'the product page has an add-to-cart button').toBeVisible({ timeout: 15_000 });
+            return;
+        case 'cart':
+            if (product) {
+                await expect.poll(async () => normalise(await textOf(roots())).includes(normalise(product)),
+                    { message: `the cart should hold ${product}`, timeout: 15_000 }).toBe(true);
+            }
+            return;
+        default:
+            // home, url: opened without an HTTP error; checkout: openPage waited for the checkout form.
+            await expect(page.locator('body'), 'the page has content').not.toBeEmpty();
+    }
 }
 
 const normalise = s => String(s).replace(/\s+/g, ' ').trim().toLowerCase();
@@ -186,10 +256,22 @@ async function pairsIn(root) {
  * @param {{page, merchant, expect, testInfo}} ctx
  */
 async function runCheck(check, { page, merchant, expect, testInfo }) {
-    const roots = await openPage(check, { page, merchant });
+    // Uncaught script errors are reported, not failed on: third-party apps throw on most live stores.
+    const jsErrors = [];
+    page.on('pageerror', e => jsErrors.push(String(e.message || e).split('\n')[0].slice(0, 160)));
+    const { roots, product } = await openPage(check, { page, merchant });
+    if (product) testInfo.annotations.push({ type: 'product', description: product });
     const where = check.page === 'url' ? `${check.path} page` : `${check.page}${check.product ? ` (${check.product})` : ''} page`;
     const timeout = check.page === 'checkout' ? 30_000 : 15_000;   // checkout's order summary renders late
     if (check.page !== 'checkout') await scrollThrough(page);
+
+    if (check.type === 'page_works') {
+        await expectPageWorks(check, { page, expect, product, roots });
+        if (jsErrors.length) {
+            testInfo.annotations.push({ type: 'js errors', description: `${jsErrors.length}: ${[...new Set(jsErrors)].slice(0, 3).join(' | ')}` });
+        }
+        return;
+    }
 
     if (check.type === 'text_visible' || check.type === 'text_absent') {
         const want = normalise(check.text);
