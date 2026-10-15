@@ -161,7 +161,7 @@ test.describe('ABC core storefront — 4. Product page', () => {
         await expect(page.getByRole('link', { name: 'Print Tear Sheet' })).toHaveAttribute('href', /variant=\d+.*view=print/);
     });
 
-    test('Add to cart adds exactly the selected variant (verified with /cart.js)', async ({ page, merchant }) => {
+    test('Add to cart adds exactly the selected variant (verified with /cart.js)', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'abc', 'ABC only');
         test.setTimeout(150_000);
         const handle = handleOf(merchant.products.secondary.path);

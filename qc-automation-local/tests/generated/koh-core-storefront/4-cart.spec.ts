@@ -132,7 +132,7 @@ test.describe('KOH core storefront — 4. Cart for non-builder products', () => 
         await emptyCart(page);
     });
 
-    test('Mixed cart and the hand-off to Shopify checkout (stops at the checkout URL)', async ({ page, merchant }) => {
+    test('Mixed cart and the hand-off to Shopify checkout (stops at the checkout URL)', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
         const { simple, apparelAlt } = merchant.products;
 

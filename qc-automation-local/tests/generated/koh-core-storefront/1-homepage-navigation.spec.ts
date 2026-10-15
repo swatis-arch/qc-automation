@@ -4,7 +4,7 @@ import { test, expect } from '../../../fixtures/base';
 import { ONLY_KOH, SITE, brokenImages, closeDrawer, expectDrawerOpen, drawer, fetchStatus, load, note, pathOf, press, scrollWidth, sel } from './helpers';
 
 test.describe('KOH core storefront — 1. Homepage and navigation', () => {
-    test('Homepage loads with title, meta, header, logo, cart button and no broken images', async ({ page, merchant }) => {
+    test('Homepage loads with title, meta, header, logo, cart button and no broken images', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         expect(await load(page, merchant.pages.homepage)).toBe(200);

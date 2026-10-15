@@ -84,7 +84,7 @@ test.describe('Revitin buy box — 4. Upsell and checkout', () => {
         await expect(cartBadge(page, 2), 'header badge shows 2 after the upsell add').toBeVisible();
     });
 
-    test('Drawer Checkout reaches the Shopify checkout URL', async ({ page, merchant }) => {
+    test('Drawer Checkout reaches the Shopify checkout URL', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'revitin', 'Revitin buy box only');
         test.setTimeout(120_000);
 

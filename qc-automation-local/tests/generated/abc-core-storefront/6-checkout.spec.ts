@@ -6,7 +6,7 @@ import { addToCart, clearCart, drawer, handleOf, note, openEmpty, pdpTitle, read
 const CHECKOUT_URL = /\/checkouts\/cn\/[^/]+\/en-us/;
 
 test.describe('ABC core storefront — 6. Checkout', () => {
-    test("Drawer 'Check Out' reaches the Shopify checkout URL and stops", async ({ page, merchant }) => {
+    test("Drawer 'Check Out' reaches the Shopify checkout URL and stops", { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'abc', 'ABC only');
         test.setTimeout(180_000);
 

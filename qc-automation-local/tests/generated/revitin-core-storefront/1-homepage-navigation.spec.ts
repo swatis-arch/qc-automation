@@ -82,7 +82,7 @@ test.describe('Revitin core storefront — 1. Homepage and header navigation', (
         await expect(page).not.toHaveTitle(/404/);
     });
 
-    test('Homepage images load, no horizontal overflow, no page errors', async ({ page, merchant }) => {
+    test('Homepage images load, no horizontal overflow, no page errors', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'revitin', ONLY_REVITIN);
 
         const errors: string[] = [];
@@ -97,7 +97,7 @@ test.describe('Revitin core storefront — 1. Homepage and header navigation', (
         expect(errors, 'uncaught page errors on the homepage').toEqual([]);
     });
 
-    test('Header links reach their pages and the logo returns home', async ({ page, merchant }) => {
+    test('Header links reach their pages and the logo returns home', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'revitin', ONLY_REVITIN);
 
         await load(page, merchant.pages.homepage);

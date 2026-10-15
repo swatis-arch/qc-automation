@@ -22,7 +22,7 @@ const shownGalleryImages = (page: Page) =>
 const trioFrequency = (page: Page) => trioCard(page).getByRole('combobox').locator('option:checked');
 
 test.describe('Revitin buy box — 1. Size, flavor and URL', () => {
-    test('Default PDP state', async ({ page, merchant }) => {
+    test('Default PDP state', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'revitin', 'Revitin buy box only');
 
         // 1. Open /products/revitin-natural-toothpaste on a fresh context; popups are closed by the fixture.

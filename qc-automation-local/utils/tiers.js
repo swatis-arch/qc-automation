@@ -12,9 +12,13 @@
  * therefore runs in regression/full as soon as its folder exists.
  *
  * Tiers:
- *   smoke       @smoke-tagged tests (none of the generated tests are tagged yet, so this finds nothing)
+ *   smoke       tests tagged @smoke ({ tag: '@smoke' }): the critical path per merchant (homepage, add to cart,
+ *               checkout hand-off). Tag 1–3 tests in each new suite.
  *   regression  every generated module
  *   full        every generated module (same as regression until visual suites are generated)
+ *
+ * All tiers default to the desktop projects: generated suites cover mobile in their own *-mobile.spec.ts files
+ * (390x844 via test.use), and the desktop-written tests are not built for the Pixel 7 project.
  */
 
 const fs   = require('fs');
@@ -41,19 +45,19 @@ const REGRESSION_MODULES = Object.keys(MODULES);
 
 const TIERS = {
     smoke: {
-        description:     '@smoke-tagged critical checks (no generated test is tagged yet)',
+        description:     'Critical path, tests tagged @smoke (homepage, add to cart, checkout hand-off)',
         args:            ['--grep', '@smoke'],
         defaultViewport: 'desktop',
     },
     regression: {
         description:     'Daily run: every generated module (' + REGRESSION_MODULES.join(', ') + ')',
         args:            REGRESSION_MODULES.map(m => MODULES[m].file),
-        defaultViewport: 'all',
+        defaultViewport: 'desktop',
     },
     full: {
         description:     'Everything generated (same as regression for now)',
         args:            Object.values(MODULES).map(m => m.file),
-        defaultViewport: 'all',
+        defaultViewport: 'desktop',
     },
 };
 

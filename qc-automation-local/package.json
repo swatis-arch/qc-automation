@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "playwright test",
-    "test:smoke": "node scripts/run-project.js desktop --grep \"@smoke\"",
+    "test:smoke": "node scripts/run-suite.js smoke",
     "test:regression": "node scripts/run-suite.js regression",
     "test:full": "node scripts/run-suite.js full",
     "test:module": "node scripts/run-suite.js",

@@ -6,7 +6,7 @@ import { load, note, press, sel, statusAfter, waitForCards } from './helpers';
 const PROMO_PAGES = /\/pages\/promotions$/;
 
 test.describe('ABC core storefront — 1. Homepage and navigation', () => {
-    test('Homepage loads with header, logo, search, cart icon and hero', async ({ page, merchant }) => {
+    test('Homepage loads with header, logo, search, cart icon and hero', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'abc', 'ABC only');
 
         // 1. Open the homepage on a fresh context and wait for the hero slideshow.
