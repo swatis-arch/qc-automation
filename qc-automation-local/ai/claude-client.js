@@ -44,23 +44,36 @@ async function postWithRetry(url, headers, body) {
  * @param {string}  opts.userText
  * @param {Object} [opts.schema]     JSON schema for the reply (structured output)
  * @param {number} [opts.maxTokens]
+ * @param {{label: string, base64: string, mediaType?: string}[]} [opts.images]  screenshots, each after its label
  * @returns {Promise<string>} the reply text
  */
-async function callClaude({ system, userText, schema, maxTokens = 4000 }) {
+async function callClaude({ system, userText, schema, maxTokens = 4000, images = [] }) {
     const p = provider();
     if (!p) throw new Error('No Claude key configured (CLAUDE_API_KEY or OPENROUTER_API_KEY).');
     const keyName = p === 'anthropic' ? 'CLAUDE_API_KEY' : 'OPENROUTER_API_KEY';
 
+    // With images, the message is a list of parts: the text, then each label followed by its image.
+    const parts = images.flatMap(img => {
+        const type = img.mediaType || 'image/png';
+        return [
+            { type: 'text', text: img.label },
+            p === 'anthropic'
+                ? { type: 'image', source: { type: 'base64', media_type: type, data: img.base64 } }
+                : { type: 'image_url', image_url: { url: `data:${type};base64,${img.base64}` } },
+        ];
+    });
+    const content = parts.length ? [{ type: 'text', text: userText }, ...parts] : userText;
+
     let res, busy;
     if (p === 'anthropic') {
-        const body = { model: CLAUDE_MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: userText }] };
+        const body = { model: CLAUDE_MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content }] };
         if (schema) body.output_config = { format: { type: 'json_schema', schema } };
         ({ res, busy } = await postWithRetry(CLAUDE_API_URL, { 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' }, body));
     } else {
         const body = {
             model:      OPENROUTER_MODEL,
             max_tokens: maxTokens,
-            messages:   [{ role: 'system', content: system }, { role: 'user', content: userText }],
+            messages:   [{ role: 'system', content: system }, { role: 'user', content }],
         };
         if (schema) body.response_format = { type: 'json_schema', json_schema: { name: 'reply', strict: true, schema } };
         ({ res, busy } = await postWithRetry(OPENROUTER_API_URL, {

@@ -41,7 +41,7 @@ Team member (browser)  →  ngrok link  →  QC Console (this PC, port 4000)
 | 5 | Tested login, bad keys, unsafe filters, path tricks, cancel, and a real single-test run | — |
 | 6 | Public link: no domain was available, so ngrok's free fixed domain is used. Installed ngrok with winget and updated it to 3.39 (3.3 lacked `--url`) | `package.json` (`console:share`), `console/start-console.cmd` |
 | 7 | Slack: after each run, the console runs the same steps as `npm run qa:report`. Old evidence is moved to `reports/console/archived-evidence/` first so it doesn't leak into the new report | `console/server.js`, `notifications/slack.js` (links) |
-| 8 | PDF report: summary page, then each failure with error, AI cause and screenshot, then every test. Rendered with Playwright's Chromium | `console/pdf-report.js` |
+| 8 | Run report (HTML + PDF): verdict, results by suite, site issues in plain words with screenshots, QA checks, observations, next steps; technical detail and every test in appendices. Claude writes the wording; rendered with Playwright's Chromium | `console/run-report.js`, `console/pdf-report.js` |
 | 9 | Gemini fallback: uses the existing `GOOGLE_API_KEY` until a Claude key is added | `console/ai.js` |
 | 10 | Playwright Test Agents (planner / generator / healer) for writing new tests with AI | `.claude/agents/`, `.mcp.json`, `specs/`, `tests/seed.spec.ts` |
 
@@ -72,7 +72,13 @@ To start it automatically at Windows login, press `Win + R`, type `shell:startup
 
 1. Open the link. The first visit shows ngrok's warning page; click **Visit Site**. Then enter the access key.
 2. Type your name in **You:**, then a command.
-3. Watch the live log. When the run finishes, use **PDF report**, **Open Playwright report**, or **Ask AI why** on a failure.
+3. Watch the live log. When the run finishes, use **Report** (or **PDF**), **Open Playwright report**, or **Ask AI why** on a failure.
+   The report reads like a QA report for the merchant: a one-line verdict, results by suite, the site issues found
+   in plain words (severity, page, failing tests), each issue's screenshot, failures to check first because they may
+   be the test rather than the site, other observations and next steps; the technical detail is in an appendix.
+   Claude writes the wording from the results and screenshots (`console/run-report.js`, saved as `summary.json`);
+   Playwright decided pass/fail, and severities are proposals for QA to confirm.
+   Rebuild a run's report with `node console/pdf-report.js <runId> --rewrite`.
 4. The Slack channel gets the summary with links. Clicking them asks for the access key once.
 
 A store the suite isn't set up for can be tested without a ticket. `regression on rydertoys.com` (or just

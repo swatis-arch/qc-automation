@@ -225,9 +225,10 @@ async function buildReports(run, dir, env, onData) {
     }
 
     try {
-        await buildPdf(run, dir);
+        await buildPdf(run, dir);   // also writes summary.json (AI write-up) and report.html
         run.hasPdf = true;
-        onData('[PDF] report.pdf written\n');
+        run.hasHtml = fs.existsSync(path.join(dir, 'report.html'));
+        onData('[Report] report.pdf and report.html written\n');
     } catch (e) {
         onData(`[PDF] failed: ${e.message}\n`);
     }
@@ -425,6 +426,7 @@ function jiraComment(run) {
     if (base) {
         lines.push('');
         if (run.hasReport) lines.push(`Report: ${base}/report/index.html`);
+        if (run.hasHtml) lines.push(`Report: ${base}/files/report.html`);
         if (run.hasPdf) lines.push(`PDF: ${base}/files/report.pdf`);
         lines.push('(The links ask for the QC Console access key.)');
     }
