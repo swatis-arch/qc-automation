@@ -16,7 +16,8 @@
  * Deploy: see slack-bot/README.md
  */
 
-const VALID_SUITES = ['smoke', 'regression', 'full', 'visual', 'technical'];
+// Must match the workflow's `suite` options (.github/workflows/regression.yml); visual/technical were retired 2026-10-14.
+const VALID_SUITES = ['smoke', 'regression', 'full'];
 
 // Keep in sync with ACTIVE_MERCHANTS in merchants/index.js
 const VALID_MERCHANTS = ['revitin', 'koh', 'abc', 'orion', 'laurageller'];   // keep in sync with ACTIVE_MERCHANTS

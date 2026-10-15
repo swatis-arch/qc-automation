@@ -20,7 +20,7 @@
 
 const { spawnSync } = require('child_process');
 require('dotenv').config();
-const { MODULES, TIERS } = require('../utils/tiers');
+const { MODULES, TIERS, TICKET } = require('../utils/tiers');
 
 const PROJECT_GLOB = {
     desktop: '*-desktop-chromium',
@@ -43,7 +43,7 @@ if (!name || name === '--list') {
 }
 
 const tier   = TIERS[name];
-const mod    = MODULES[name];
+const mod    = MODULES[name] || (name === 'ticket' ? TICKET : null);   // ticket: needs QC_TICKET_CHECKS
 if (!tier && !mod) {
     console.error(`Unknown tier/module "${name}".\n`);
     printList();

@@ -90,6 +90,10 @@ const test = base.extend({
             await context.request.post(new URL('/password', baseURL).toString(), {
                 form: { form_type: 'storefront_password', utf8: '✓', password },
             });
+            // Copy the unlock cookie into the browser too: in the Playwright Test Agents' browser the request
+            // client's cookies don't reach the page, which then stays on /password.
+            const { cookies } = await context.request.storageState();
+            if (cookies.length) await context.addCookies(cookies);
         }
         await use();
     }, { scope: 'test', auto: true }],
@@ -350,4 +354,4 @@ const test = base.extend({
 
 });
 
-module.exports = { test, expect };
+module.exports = { test, expect, setupPage };

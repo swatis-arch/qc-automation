@@ -51,6 +51,7 @@
   .st { font-size: 12px; font-weight: 600; text-transform: uppercase; }
   .st.passed { color: var(--pass); } .st.failed { color: var(--fail); } .st.running, .st.queued, .st.reporting { color: var(--accent); }
   .st.cancelled, .st.interrupted, .st.no { color: var(--warn); }
+  .st.untested, .st.skipped { color: var(--muted); }
   .detail { overflow: auto; padding: 14px; }
   .detail h3 { margin: 0 0 4px; font-size: 15px; }
   .stats { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0; }
@@ -154,7 +155,20 @@ async function send(text) {
   try {
     const out = await api('/api/command', { method: 'POST', body: JSON.stringify({ text, user }) });
     let extra = null;
-    if (out.confirm) {
+    if (out.action === 'batch' && (out.tickets || []).length) {
+      extra = document.createElement('div');
+      const go = document.createElement('button');
+      go.textContent = `Test these ${out.tickets.length} tickets`;
+      const no = document.createElement('button');
+      no.className = 'ghost'; no.textContent = 'Cancel';
+      go.onclick = async () => {
+        go.disabled = no.disabled = true;
+        const r = await api('/api/batch', { method: 'POST', body: JSON.stringify({ keys: out.tickets.map(t => t.key), user, command: text }) });
+        addMsg('QC', `Planning ${r.accepted} ticket(s). Each appears in Runs as it is queued, or as "untested" with the reason.`, 'bot');
+      };
+      no.onclick = () => { go.disabled = no.disabled = true; };
+      extra.append(go, no);
+    } else if (out.confirm) {
       extra = document.createElement('div');
       const go = document.createElement('button');
       go.textContent = 'Start this run';
@@ -238,6 +252,8 @@ function renderDetail(r) {
       ${s ? ` · <a href="/runs/${esc(r.id)}/files/results.json" target="_blank" rel="noopener">results.json</a>` : ''}
       ${r.slack ? ` · <a href="/runs/${esc(r.id)}/files/qa-report.md" target="_blank" rel="noopener">QA report</a> · sent to Slack` : ''}
     </p>
+    ${(r.checkResults || []).length ? `<p><b>Ticket checks</b></p><ul>${r.checkResults.map(c => `
+      <li><span class="st ${esc(c.status)}">${esc(c.status)}</span> ${esc(c.title)}${c.detail ? ` <span class="meta">${esc(c.detail)}</span>` : ''}</li>`).join('')}</ul>` : ''}
     ${(r.failures || []).map(f => `
       <details class="fail"><summary><b>${esc(f.title)}</b> <span class="meta">${esc(f.project)}${f.status === 'flaky' ? ' · flaky' : ''}</span></summary>
       <pre>${esc(f.error || '(no error message)')}</pre>
@@ -257,7 +273,7 @@ function renderDetail(r) {
 async function init() {
   meta = await api('/api/meta');
   $('aiMode').textContent = meta.ai ? `AI: ${meta.ai}` : 'AI: keywords only';
-  $('aiMode').title = meta.ai ? '' : 'Set CLAUDE_API_KEY (or GOOGLE_API_KEY) in .env for free-text commands and failure explanations';
+  $('aiMode').title = meta.ai ? '' : 'Set CLAUDE_API_KEY or OPENROUTER_API_KEY (or GOOGLE_API_KEY) in .env for free-text commands and failure explanations';
   const examples = ['status', ...(meta.jira ? ['test KOH-68'] : []), `run smoke ${meta.merchants[0]}`, `run pdp ${meta.merchants[1] || meta.merchants[0]} mobile`, 'what does the cart module cover?'];
   $('chips').innerHTML = examples.map(x => `<button type="button" class="ghost">${esc(x)}</button>`).join('');
   $('chips').querySelectorAll('button').forEach(b => b.onclick = () => { $('text').value = b.textContent; $('text').focus(); });

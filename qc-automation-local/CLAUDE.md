@@ -20,13 +20,14 @@ See [README.md](./README.md) for setup, commands, and CI.
 | `elements/` | Business elements shared by 2+ page objects | See Architecture below |
 | `core/<feature>/` | Page objects (`HomePage`, `Navbar`, `PLPPage`, `PDPPage`, `CartPage`, `CheckoutPage`) | Public API the specs call. `discount/`, `subscription/`, `visual/` are empty placeholders |
 | `fixtures/base.js` | `test.extend()` fixtures; specs import `{ test, expect }` from here, never from `@playwright/test` | Fixtures are merchant-agnostic |
-| `tests/*.spec.js` | Specs. `@smoke` in the title puts a test in the fast suite | No merchant-specific data inline |
+| `tests/generated/<suite>/` | The only specs that run: written by the Playwright Test Agents. `@smoke` in a title puts a test in the fast suite | No merchant-specific data inline |
+| `tests/_archive/` | Retired hand-written specs + visual baselines (since 2026-10-14). Ignored by `playwright.config.js` | Don't edit; `git mv` back to `tests/` to revive (see its README) |
 | `utils/` | console/network capture, screenshots, failure evidence, shared test data | Evidence is written to `reports/evidence/` |
 | `ai/` | Claude RCA (`analyze-failure.js`), severity maps, report generator | Advisory only — see AI Layer Rules |
 | `notifications/slack.js` | Slack report | |
 | `slack-bot/` | Cloudflare Worker for the `/qc` slash command (own `package.json`) | Keep `VALID_MERCHANTS` in sync with `ACTIVE_MERCHANTS` |
 | `console/` | QC Console web page (`npm run console`): typed commands → validated run plan → `scripts/run-suite.js`; data in `reports/console/` | AI only picks a plan; `validatePlan()` in `console/ai.js` is the gate. No code edits from the console |
-| `utils/tiers.js` | Tier (smoke/regression/full) + module definitions | Register new specs here; `scripts/run-suite.js` consumes it |
+| `utils/tiers.js` | Tier (smoke/regression/full) + module definitions | One module per `tests/generated/` folder, found automatically; `scripts/run-suite.js` consumes it |
 | `utils/popups.js` | Closes marketing popups before each test proceeds (auto `popupGuard` fixture + page-object navigation) | Never add per-test popup code; flag `features.popup` per merchant; cookie bars are not auto-accepted |
 | `utils/rate-limit.js` | Cloudflare 429 guard (pacing + cooldown), used by the auto `rateLimitGuard` fixture | Don't add ad-hoc `waitForTimeout` to dodge 429s |
 | `scripts/run-project.js`, `scripts/run-suite.js`, `qa-report.js` | npm-script helpers | |
@@ -92,8 +93,9 @@ the `playwright-test` MCP server in `.mcp.json`, plans in `specs/`, seed `tests/
 - Run them against one merchant: pass `--project=<slug>-desktop-chromium` / `MERCHANT=<slug>`; the seed uses `fixtures/base`.
 
 Rules for agent-written tests (on top of everything above):
-- Save new tests to `tests/generated/<area>.spec.ts`. They stay out of the tiers until QA reviews them and moves the
-  cases into the real spec and registers them in `utils/tiers.js`.
+- Save new tests to `tests/generated/<area>/*.spec.ts`, with the plan in `specs/<area>.md`. Since 2026-10-14 these are
+  the suite: each folder becomes a module and runs in regression/full as soon as it exists, so QA reviews a new
+  folder before it is merged.
 - Import `{ test, expect }` from `fixtures/base`, use the `merchant` fixture and page objects. No merchant URLs, product
   handles or selectors inline — add them to `merchants/<slug>/config.js` / `locators.js`.
 - Never submit forms that create data (contact, newsletter, wholesale, account) and never place an order.
@@ -169,4 +171,4 @@ Every identified failure must eventually be classified as one of:
 - Evidence with `rateLimited: true` means HTTP 429 was seen — treat as throttling from the run, re-run at lower load before calling it a `REAL_BUG`.
 - `workers: 1` and `fullyParallel: false` are intentional — cart tests share browser storage. Don't raise them without isolating cart state.
 - Checkout tests must stop at the Shopify checkout URL. No order placement, ever.
-- Visual baselines live in `tests/visual.spec.js-snapshots/` (named per merchant/project/OS). Update them with `npm run test:visual:update` only after confirming the visual change is intentional, and review the PNG diff in the PR.
+- Visual regression is archived with its baselines (`tests/_archive/visual.spec.js-snapshots/`). If it is revived, update baselines only after confirming the visual change is intentional, and review the PNG diff in the PR.

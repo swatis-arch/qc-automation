@@ -3,7 +3,7 @@
  *
  * Runs the full local flow from a single VS Code terminal command:
  *   1. Playwright regression suite (for MERCHANT, see .env)
- *   2. Claude failure analysis (mock RCA until CLAUDE_API_KEY is set in .env)
+ *   2. Claude failure analysis (mock RCA until CLAUDE_API_KEY or OPENROUTER_API_KEY is set in .env)
  *   3. Consolidated report generation (reports/qa-report.json + .md)
  *   4. Slack notification (SLACK_WEBHOOK_URL in .env)
  *

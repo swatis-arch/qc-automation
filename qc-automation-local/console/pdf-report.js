@@ -144,7 +144,7 @@ function buildHtml(run, results, qaReport, runDir) {
       </div>
       ${failures.length ? `<p>Severity of failures (AI estimate): P0 ${sev.P0 || 0} · P1 ${sev.P1 || 0} · P2 ${sev.P2 || 0} · P3 ${sev.P3 || 0}</p>` : '<p><b>All tests that ran passed.</b></p>'}
       <div class="note">Playwright decides PASS/FAIL. The “probable cause” for each failure is Claude's advisory analysis; QA makes the final call.
-      ${mock ? '<br><b>This run used mock RCA</b> (CLAUDE_API_KEY not set), so the causes below are placeholders.' : ''}</div>
+      ${mock ? '<br><b>This run used mock RCA</b> (no CLAUDE_API_KEY or OPENROUTER_API_KEY set), so the causes below are placeholders.' : ''}</div>
 
       ${failures.length ? `<h2 class="pb">Failures (${failures.length})</h2>${failureHtml}` : ''}
 

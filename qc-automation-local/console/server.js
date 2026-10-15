@@ -77,6 +77,45 @@ function createRun(plan, user, command, ticket = null) {
     return run;
 }
 
+/** A ticket from a batch that gets no run: listed in Runs with the reason, never queued. */
+function recordUntested(ticket, reason, user, command) {
+    const id = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14) + '-' + crypto.randomBytes(2).toString('hex');
+    runs.unshift({
+        id, plan: null, user, command, ticket,
+        label:   'not tested',
+        status:  'untested',
+        note:    reason,
+        created: new Date().toISOString(),
+        started: null, finished: null, exitCode: null, summary: null, failures: [],
+    });
+    saveIndex();
+}
+
+const busyWithTicket = key => runs.some(r => r.ticket && r.ticket.key === key && ['queued', 'running'].includes(r.status));
+
+/**
+ * Plan and queue each ticket of a confirmed batch, one at a time (each is a Jira read + a Claude call).
+ * Long runs need a person; tickets already queued or running are skipped.
+ */
+async function runBatch(keys, user, command) {
+    for (const key of keys) {
+        const fallback = { key, url: jira.browseUrl(key), summary: '' };
+        try {
+            if (busyWithTicket(key)) { recordUntested(fallback, 'Already queued or running.', user, command); continue; }
+            const out = await ai.interpret(`test ${key}`, aiContext());
+            const ticket = out.ticket || fallback;
+            if (out.action !== 'run') { recordUntested(ticket, out.reply, user, command); continue; }
+            if (ai.needsConfirm(out.plan)) { recordUntested(ticket, `${out.reply}\n\nThis is a long run, so start it by hand.`, user, command); continue; }
+            const run = createRun(out.plan, user, command, ticket);
+            run.note = out.reply;
+            saveIndex();
+        } catch (e) {
+            recordUntested(fallback, `Couldn't plan this ticket: ${e.message}`, user, command);
+        }
+        logEvent({ source: 'batch', key, user });
+    }
+}
+
 function emit(runId, event, data) {
     for (const res of listeners.get(runId) || []) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
@@ -99,6 +138,18 @@ function pump() {
         FORCE_COLOR:  '0',
         CI:           '',
     };
+    if (run.plan.target === 'ticket') {
+        // tests/ticket-checks.spec.js reads (and re-validates) the checks from this file.
+        const checksFile = path.join(dir, 'checks.json');
+        const t = run.ticket || {};
+        fs.writeFileSync(checksFile, JSON.stringify({ key: t.key || 'ticket', summary: t.summary || '', checks: run.plan.checks }, null, 2));
+        env.QC_TICKET_CHECKS = checksFile;
+        if (run.plan.merchant === 'adhoc') {
+            // A store from the ticket's link: playwright.config.js then builds adhoc-* projects only.
+            env.MERCHANT = '';
+            env.QC_ADHOC_BASE_URL = run.plan.storeUrl;
+        }
+    }
     archiveOldEvidence(run.id);
     const child = spawn(process.execPath, args, { cwd: ROOT, env, detached: process.platform !== 'win32' });
     current = { run, child };
@@ -214,9 +265,15 @@ function collectResults(run, dir) {
         durationMin: Math.round((s.duration || 0) / 60000),
     };
     run.failures = [];
+    if (run.plan.target === 'ticket') run.checkResults = [];
     const walk = suite => {
         for (const spec of suite.specs || []) {
             for (const t of spec.tests || []) {
+                if (run.checkResults) {
+                    const status = { expected: 'passed', unexpected: 'failed', flaky: 'flaky', skipped: 'skipped' }[t.status] || t.status;
+                    const price  = (t.annotations || []).find(a => a.type === 'price');
+                    run.checkResults.push({ title: spec.title, status, detail: price ? price.description : null });
+                }
                 if (t.status !== 'unexpected' && t.status !== 'flaky') continue;
                 const last = (t.results || []).slice(-1)[0] || {};
                 const err  = (last.error && (last.error.message || last.error.value)) || '';
@@ -321,8 +378,8 @@ function logEvent(entry) {
  */
 async function handleTicketWebhook(key, status) {
     const user = 'Jira automation';
-    if (!jira.merchantForKey(key)) return logEvent({ source: 'jira-webhook', key, status, skipped: 'project not in JIRA_PROJECT_MAP' });
-    if (runs.some(r => r.ticket && r.ticket.key === key && ['queued', 'running'].includes(r.status))) {
+    // The store is worked out from the ticket itself (console/ai.js), so unmapped projects are read too.
+    if (busyWithTicket(key)) {
         return logEvent({ source: 'jira-webhook', key, status, skipped: 'already queued or running' });
     }
     const out = await ai.interpret(`test ${key}`, aiContext());
@@ -351,6 +408,14 @@ function jiraComment(run) {
         `${run.label}, triggered by ${run.user} on ${new Date(run.started).toUTCString()}`,
         `Result: ${s.passed || 0} passed, ${s.failed || 0} failed, ${s.flaky || 0} flaky, ${s.skipped || 0} skipped (${s.durationMin ?? '?'} min)`,
     ];
+    if ((run.checkResults || []).length) {
+        lines.push('', 'Ticket checks:');
+        for (const c of run.checkResults) lines.push(`- ${c.status.toUpperCase()}: ${c.title}${c.detail ? ` (${c.detail})` : ''}`);
+    }
+    if ((run.plan.manual || []).length) {
+        lines.push('', 'Not automated, check by hand:');
+        for (const m of run.plan.manual) lines.push(`- ${m}`);
+    }
     if ((run.failures || []).length) {
         lines.push('', 'Failures:');
         for (const f of run.failures.slice(0, 15)) lines.push(`- [${f.project}] ${f.title}: ${(f.error || '').split('\n')[0].slice(0, 160)}`);
@@ -444,13 +509,15 @@ const server = http.createServer(async (req, res) => {
             if (out.action === 'run') {
                 if (ai.needsConfirm(out.plan)) confirm = true;
                 else run = createRun(out.plan, user, text, out.ticket || null);
+                if (run && out.ticket) { run.note = out.reply; saveIndex(); }
             } else if (out.action === 'status') {
                 out.reply = statusText();
             } else if (out.action === 'cancel') {
                 out.reply = cancelCurrent() ? `Cancelled: ${current.run.label}` : 'Nothing is running.';
             }
             fs.appendFileSync(CMD_LOG, JSON.stringify({ at: new Date().toISOString(), user, text, action: out.action, plan: out.plan || null, runId: run && run.id }) + '\n');
-            return send(res, 200, { action: out.action, reply: out.reply, plan: out.plan || null, ticket: out.ticket || null, confirm, run: publicRun(run), source: out.source });
+            return send(res, 200, { action: out.action, reply: out.reply, plan: out.plan || null, ticket: out.ticket || null, confirm, run: publicRun(run), source: out.source,
+                tickets: out.tickets || null });
         }
 
         // Post a finished run's result to its Jira ticket. Only ever on an explicit click in the UI.
@@ -464,6 +531,19 @@ const server = http.createServer(async (req, res) => {
             run.jiraPosted = { at: new Date().toISOString(), by: cleanUser(body.user) };
             saveIndex();
             return send(res, 200, { ok: true, run: publicRun(run) });
+        }
+
+        // A confirmed "test all tickets" list: answer at once, plan and queue the tickets in the background.
+        if (p === '/api/batch' && req.method === 'POST') {
+            const body = await readBody(req);
+            const keys = [...new Set((Array.isArray(body.keys) ? body.keys : []).map(k => String(k).toUpperCase()))]
+                .filter(k => /^[A-Z][A-Z0-9]+-\d+$/.test(k)).slice(0, 25);
+            if (!keys.length) return send(res, 400, { error: 'No ticket keys.' });
+            const user = cleanUser(body.user);
+            const command = String(body.command || '').slice(0, 500);
+            logEvent({ source: 'batch', user, text: command, keys });
+            runBatch(keys, user, command).catch(e => logEvent({ source: 'batch', error: e.message }));
+            return send(res, 202, { accepted: keys.length });
         }
 
         if (p === '/api/cancel' && req.method === 'POST') {
@@ -505,5 +585,5 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
     console.log(`QC Console on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
     console.log(`Access key: ${KEY}${process.env.QC_CONSOLE_KEY ? ' (from QC_CONSOLE_KEY)' : '  (random — set QC_CONSOLE_KEY in .env to keep it fixed)'}`);
-    console.log(`AI: ${ai.aiName() || 'keyword parser (no CLAUDE_API_KEY or GOOGLE_API_KEY)'}`);
+    console.log(`AI: ${ai.aiName() || 'keyword parser (no CLAUDE_API_KEY, OPENROUTER_API_KEY or GOOGLE_API_KEY)'}`);
 });

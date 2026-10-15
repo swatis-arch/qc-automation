@@ -14,8 +14,6 @@ on:
           - smoke
           - regression
           - full
-          - visual
-          - technical
       merchant:
         description: 'Merchant slug (must match merchants/<slug>/config.js and be in ACTIVE_MERCHANTS)'
         required: false
@@ -131,8 +129,9 @@ jobs:
       - name: Run Claude AI failure analysis
         run: node ai/analyze-failure.js
         env:
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          CLAUDE_MODEL:   claude-sonnet-5-5
+          CLAUDE_API_KEY:     ${{ secrets.CLAUDE_API_KEY }}
+          CLAUDE_MODEL:       claude-sonnet-5-5
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           MERCHANT:       ${{ github.event.inputs.merchant }}
         continue-on-error: true    # Non-fatal if Claude is unavailable
 
@@ -172,84 +171,5 @@ jobs:
             qc-automation-local/reports/qa-report.md
           retention-days: 30
 
-  # ── Visual Regression ────────────────────────────────────────────────────────
-  visual:
-    name: Visual Regression
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'visual'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: qc-automation-local/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install chromium --with-deps
-
-      - name: Run visual regression tests
-        run: npx playwright test tests/visual.spec.js --project="${MERCHANT}-desktop-chromium"
-        env:
-          CI:       true
-          BASE_URL: ${{ secrets.BASE_URL }}
-          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
-
-      - name: Upload visual report + screenshots
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: visual-report-${{ github.run_number }}
-          path: |
-            qc-automation-local/reports/html/
-            qc-automation-local/test-results/
-          retention-days: 30
-
-  # ── Technical Quality ────────────────────────────────────────────────────────
-  technical:
-    name: Technical Quality Checks
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'technical'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: qc-automation-local/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install chromium --with-deps
-
-      - name: Run technical quality checks
-        run: npx playwright test tests/technical.spec.js --project="${MERCHANT}-desktop-chromium"
-        env:
-          CI:       true
-          BASE_URL: ${{ secrets.BASE_URL }}
-          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
-
-      - name: Upload technical report
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: technical-report-${{ github.run_number }}
-          path: qc-automation-local/reports/html/
-          retention-days: 14
+  # Visual and technical jobs were removed on 2026-10-14 with their specs (now in
+  # qc-automation-local/tests/_archive/). Only agent-generated tests run.

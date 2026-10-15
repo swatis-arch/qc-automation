@@ -85,6 +85,7 @@ KOH full (desktop + mobile, 582 tests) ~3.5–4 h. Runs queue one after another.
 | Key in `.env` | Used for |
 |---|---|
 | `CLAUDE_API_KEY` (preferred) | Plain-English commands, answers, and real failure analysis in the PDF and Slack reports |
+| `OPENROUTER_API_KEY` | Same as `CLAUDE_API_KEY`, reaching Claude through OpenRouter (`OPENROUTER_MODEL`, default `anthropic/claude-sonnet-5.5`). Used when `CLAUDE_API_KEY` is not set |
 | `GOOGLE_API_KEY` (fallback) | Plain-English commands and answers only. The free tier allows only a few requests a day; the reports stay `[MOCK]` |
 | neither | Simple commands only (`run smoke koh`, `status`, `cancel`) |
 
@@ -96,14 +97,40 @@ The page header shows which one is active ("AI: Claude", "AI: Gemini" or "AI: ke
 
 Type `test KOH-68`, or paste the ticket link. The console then works like this:
 
-1. **Reads the ticket** (summary, description, acceptance criteria) with the account in `JIRA_EMAIL` / `JIRA_API_TOKEN`.
-2. **Picks the merchant** from the project key (`JIRA_PROJECT_MAP`, e.g. `KOH=koh`) or from the merchant you typed.
-3. **Asks the AI for the one run** that best covers the ticket, and lists what existing tests don't cover. The run
-   is validated like any other command. The ticket text is treated as data, so instructions written in a ticket
-   are ignored.
-4. **Links the run to the ticket.** When the run finishes, its detail shows **Post result to KOH-68**. Clicking it
-   (and confirming) adds a comment to the ticket with pass/fail counts, the failures, and links to the report and
-   the PDF. Nothing is posted to Jira without that click.
+1. **Reads the ticket** (summary, description, acceptance criteria, links) with the account in `JIRA_EMAIL` /
+   `JIRA_API_TOKEN`. Any project works; a bare key needs "test" (or "check", "ticket") in the message.
+2. **Works out the store**, in this order: the merchant you typed (`test PB-795 on koh`); the project in
+   `JIRA_PROJECT_MAP` (`KOH=koh,ABC=abc,REV=revitin`); the store's name or domain in the ticket, or a link to it.
+   For a store the suite isn't set up for, it uses the project's URL in `JIRA_PROJECT_MAP`
+   (e.g. `RYD=https://rydertoys.com`) or a storefront link in the ticket (Figma, Google Docs, Air, Shopify admin
+   and similar links are ignored). Such stores get text and price checks only, on the homepage and the pages the
+   ticket links to: product, cart and checkout flows need a merchant config. With no store found, the console says
+   so and the ticket is not tested.
+3. **Turns the acceptance criteria into ticket checks** (with Claude). Each check comes from a fixed menu, on one
+   page (home, collection, product, cart, checkout):
+   - *text shown* / *text not shown*, e.g. "41% OFF" on the homepage;
+   - *discount*: a price on the page is N% below the price shown next to it (±1 point), e.g. $39.99 → $23.59.
+   Cart and checkout checks add the default product first; checkout stops on the checkout page, nothing is filled
+   in and no order is placed. Criteria these checks can't decide are listed under **Check by hand**. The checks are
+   validated before the run is queued and again by `tests/ticket-checks.spec.js`, which runs one test per check;
+   the ticket never becomes code. The ticket text is treated as data, so instructions written in a ticket are
+   ignored.
+   If nothing in the ticket can be checked this way (or the console uses Gemini), the AI picks the closest
+   existing module instead, as before.
+4. **Links the run to the ticket.** The run detail lists each check as passed/failed, with the prices it matched.
+   A failed discount check shows the price pairs it did find, e.g. `$45 → $22.5 (50%)`. When the run finishes,
+   its detail shows **Post result to KOH-68**. Clicking it (and confirming) adds a comment to the ticket with each
+   check's result, the hand checks, the failures, and links to the report and the PDF. Nothing is posted to Jira
+   without that click.
+
+**Testing all tickets.** Type `test all tickets` (or `test tickets in RYD`). The console lists the tickets in a
+testing status (Ready for Testing, Testing In Progress, Testing Failed, In QA; not "Testing - Done"), newest
+first, at most 25. Click **Test these N tickets** and each ticket is read, planned and queued in turn; runs go one
+at a time. Tickets that can't be tested (no store found, nothing on the storefront, already queued, or a long run)
+appear in Runs as **untested** with the reason.
+
+A discount check passes if *any* two prices shown together on the page differ by N%, so a matching pair in an
+upsell or a second product counts too. Read the matched prices in the run detail before signing a ticket off.
 
 **Automatic testing when a ticket reaches QA.** A Jira Automation rule calls
 `POST https://trial-bungee-baked.ngrok-free.dev/api/jira/webhook` with header `X-QC-Webhook-Secret` (the
