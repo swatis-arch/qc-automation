@@ -67,6 +67,39 @@ module.exports = {
     cartQtyPlus:    'button[aria-label="plus"]',
     cartQtyMinus:   'button[aria-label="minus"]',
     cartItemRemove: 'button[aria-label="remove"]',
-    cartDrawerClose: '#ns-hybrid-cart button:has-text("Close cart")',
+    // Re-verified 2026-10-14: the close button has only an aria-label, so :has-text("Close cart") matched nothing.
+    cartDrawerClose: '#ns-hybrid-cart button[aria-label="Close cart"]',
     cartSubtotal:   '#ns-hybrid-cart div:has(> p:text-is("Subtotal"))',
+
+    // -- Core storefront (verified 2026-10-14, specs/koh-core-storefront.md) -------------------------------------
+    // The <ns-hybrid-cart> HOST has no id; #ns-hybrid-cart is the role=dialog div inside its open shadow root.
+    // Playwright locators pierce it, but code in page.evaluate must go through cartHost's shadowRoot.
+    cartHost:        'ns-hybrid-cart',
+    cartHeader:      '#ns-hybrid-cart-header',
+    cartCheckoutLink: '#ns-hybrid-cart a[href="/checkout"]',
+    // cartItem also matches the 'Your Free Gifts' group and the mug teaser; this one is product lines only.
+    cartProductRow:  '#ns-hybrid-cart li:has(a[href^="/products/"])',
+    cartGiftRemove:  '#ns-hybrid-cart [data-koh-remove-gift]',
+    cartContinueShopping: '#ns-hybrid-cart a:has-text("Continue Shopping")',
+    announcementBar: '.announcement-bar-section',
+    headerNavLinks:  'header nav a',
+    menuSummary:     'header summary.header__icon--menu',
+    productCount:    '#ProductCount',
+    productGrid:     '#product-grid',
+    // name="sort_by" matches both selects; #SortBy-mobile sits in the mobile Sort drawer.
+    sortSelect:      '#SortBy',
+    sortSelectMobile: '#SortBy-mobile',
+    productCardTitle: 'h3.card__heading',
+    productCardPrice: '.price',
+    productCardBadge: '.badge',
+    // Dawn PDP (apparel and simple products; the builder PDPs use .pfp__* instead).
+    pdpForm:         'form[action="/cart/add"]',
+    pdpVariantId:    'form[action="/cart/add"] input[name="id"]',
+    pdpAddToCart:    'form[action="/cart/add"] button.product-form__submit',
+    pdpSizeRadio:    'fieldset input[type="radio"]',
+    pdpQtyInput:     'input[name="quantity"]',
+    pdpQtyPlus:      'button[name="plus"]',
+    pdpPriceSale:    '.price-item--sale',
+    faqButton:       '[data-faq-button]',
+    faqGroup:        '[data-faq-group]',
 };
