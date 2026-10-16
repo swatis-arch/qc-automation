@@ -41,7 +41,7 @@ test.describe('KOH whole site — 7. Apparel and simple PDPs', () => {
         });
     }
 
-    test('Beanie: single variant, add to cart shows the free-shipping gap', async ({ page, merchant }) => {
+    test('Beanie: single variant, add to cart shows the free-shipping gap', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
         const p = merchant.products.simple;
 
@@ -71,7 +71,7 @@ test.describe('KOH whole site — 7. Apparel and simple PDPs', () => {
         await emptyCart(page);
     });
 
-    test('Glass Mug: $0 product page is public and purchasable (O15)', async ({ page, merchant }) => {
+    test('Glass Mug: $0 product page is public and purchasable (O15)', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
         const p = merchant.products.free;
 

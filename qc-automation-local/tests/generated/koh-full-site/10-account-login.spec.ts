@@ -4,7 +4,7 @@ import { test, expect } from '../../../fixtures/base';
 import { ONLY_KOH, fetchStatus, load, note, sel } from './helpers';
 
 test.describe('KOH whole site — 10. Account login page', () => {
-    test('/a/account/login renders the Skio login (nothing entered)', async ({ page, merchant }) => {
+    test('/a/account/login renders the Skio login (nothing entered)', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const posts: string[] = [];
@@ -22,7 +22,7 @@ test.describe('KOH whole site — 10. Account login page', () => {
         expect(posts).toEqual([]);
     });
 
-    test('Classic /account/login also exists (two login experiences, O8)', async ({ page, merchant }) => {
+    test('Classic /account/login also exists (two login experiences, O8)', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         expect(await load(page, '/account/login')).toBe(200);
@@ -30,7 +30,7 @@ test.describe('KOH whole site — 10. Account login page', () => {
         note('O8', `/account/login shows the classic Shopify login (password field: ${password}); header "Log in" goes to ${merchant.pages.account}`);
     });
 
-    test('Mobile menu account links resolve', async ({ page, merchant }) => {
+    test('Mobile menu account links resolve', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await page.setViewportSize({ width: 390, height: 844 });

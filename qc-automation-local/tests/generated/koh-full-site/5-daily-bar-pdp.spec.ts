@@ -48,7 +48,7 @@ test.describe('KOH whole site — 5. Daily Bar PDP', () => {
         await expect(page.getByText(/41% off first order/i).first()).toBeAttached();
     });
 
-    test('Subscription add to cart offers the free gift and puts the mug in the cart', { tag: '@smoke' }, async ({ page, merchant }) => {
+    test('Subscription add to cart offers the free gift and puts the mug in the cart', async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await openBar(page, merchant.products.secondary.path, true);

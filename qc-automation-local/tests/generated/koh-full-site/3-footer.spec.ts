@@ -45,7 +45,7 @@ test.describe('KOH whole site — 3. Footer', () => {
         expect(bad, 'footer links that do not return 200').toEqual([]);
     });
 
-    test('Social links point to the KOH profiles', async ({ page, merchant }) => {
+    test('Social links point to the KOH profiles', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await load(page, merchant.pages.homepage);
@@ -55,7 +55,7 @@ test.describe('KOH whole site — 3. Footer', () => {
         await expect(footer.locator('a[href*="tiktok.com/"]').first()).toHaveAttribute('href', /tiktok\.com\/@kreaturesofhabit/i);
     });
 
-    test('Footer newsletter block renders and nothing is submitted', async ({ page, merchant }) => {
+    test('Footer newsletter block renders and nothing is submitted', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const posts: string[] = [];

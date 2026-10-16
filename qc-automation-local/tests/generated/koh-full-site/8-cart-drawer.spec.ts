@@ -49,7 +49,7 @@ test.describe('KOH whole site — 8. Cart drawer', () => {
         await emptyCart(page);
     });
 
-    test('Drawer prices use consistent currency formatting (O7)', async ({ page, merchant }) => {
+    test('Drawer prices use consistent currency formatting (O7)', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await addBeanie(page, merchant);

@@ -7,15 +7,17 @@
  * Only tests written by the Playwright Test Agents run (since 2026-10-14). The hand-written specs
  * are in tests/_archive/ (not run; see its README).
  *
- * Modules: one per folder in tests/generated/ (e.g. koh-bundle-builder), found automatically.
+ * Modules: one per folder in tests/generated/ (e.g. revitin-buy-box), found automatically.
  * Its description is the title of the matching plan in specs/<folder>.md. A new generated suite
  * therefore runs in regression/full as soon as its folder exists.
  *
- * Tiers:
+ * Tiers (each one includes the one above it):
  *   smoke       tests tagged @smoke ({ tag: '@smoke' }): the critical path per merchant (homepage, add to cart,
  *               checkout hand-off). Tag 1–3 tests in each new suite.
- *   regression  every generated module
- *   full        every generated module (same as regression until visual suites are generated)
+ *   regression  every generated test except those tagged @full: the shopping flows (navigation, product pages,
+ *               cart, checkout hand-off). Untagged tests are regression.
+ *   full        the entire website: every generated test, including the @full ones (content pages, SEO and
+ *               accessibility checks, login pages, unknown URLs, extra mobile layout checks).
  *
  * All tiers default to the desktop projects: generated suites cover mobile in their own *-mobile.spec.ts files
  * (390x844 via test.use), and the desktop-written tests are not built for the Pixel 7 project.
@@ -50,12 +52,12 @@ const TIERS = {
         defaultViewport: 'desktop',
     },
     regression: {
-        description:     'Daily run: every generated module (' + REGRESSION_MODULES.join(', ') + ')',
-        args:            REGRESSION_MODULES.map(m => MODULES[m].file),
+        description:     'Daily run: shopping flows in every generated module, without the @full website checks (' + REGRESSION_MODULES.join(', ') + ')',
+        args:            [...REGRESSION_MODULES.map(m => MODULES[m].file), '--grep-invert', '@full'],
         defaultViewport: 'desktop',
     },
     full: {
-        description:     'Everything generated (same as regression for now)',
+        description:     'Entire website: every generated test, including content, SEO/accessibility, login and unknown-URL checks (@full)',
         args:            Object.values(MODULES).map(m => m.file),
         defaultViewport: 'desktop',
     },

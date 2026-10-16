@@ -4,7 +4,7 @@ import { test, expect } from '../../../fixtures/base';
 import { ONLY_KOH, brokenImages, load, note, overflow, pathOf, press, sel, snap } from './helpers';
 
 test.describe('KOH whole site — 9. Content pages', () => {
-    test('About page renders with headings and images', async ({ page, merchant }) => {
+    test('About page renders with headings and images', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         expect(await load(page, merchant.pages.about)).toBe(200);
@@ -30,7 +30,7 @@ test.describe('KOH whole site — 9. Content pages', () => {
         note('faq', `Opening a second question ${(await buttons.nth(1).getAttribute('aria-expanded')) === 'true' ? 'keeps' : 'closes'} the first one open`);
     });
 
-    test('Contact page form renders and is not submitted', async ({ page, merchant }) => {
+    test('Contact page form renders and is not submitted', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const posts: string[] = [];
@@ -43,7 +43,7 @@ test.describe('KOH whole site — 9. Content pages', () => {
         expect(posts).toEqual([]);
     });
 
-    test('Store locator ("Now at Sprouts") shows a working map and locations (O1)', { tag: '@smoke' }, async ({ page, merchant }) => {
+    test('Store locator ("Now at Sprouts") shows a working map and locations (O1)', async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const mapErrors: string[] = [];
@@ -61,7 +61,7 @@ test.describe('KOH whole site — 9. Content pages', () => {
         expect(noLocations, 'store list is not empty').toBeFalsy();
     });
 
-    test('Podcast, blog index and a blog article load', async ({ page, merchant }) => {
+    test('Podcast, blog index and a blog article load', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         expect(await load(page, merchant.pages.podcast)).toBe(200);
@@ -76,7 +76,7 @@ test.describe('KOH whole site — 9. Content pages', () => {
         expect(await overflow(page)).toBeLessThanOrEqual(0);
     });
 
-    test('Wholesale page renders (never submitted)', async ({ page, merchant }) => {
+    test('Wholesale page renders (never submitted)', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         expect(await load(page, merchant.pages.wholesale)).toBe(200);
@@ -84,7 +84,7 @@ test.describe('KOH whole site — 9. Content pages', () => {
         await expect(page.locator('main form, main input').first()).toBeAttached({ timeout: 15_000 });
     });
 
-    test('The four policy pages have a heading and body text', async ({ page, merchant }) => {
+    test('The four policy pages have a heading and body text', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const names: Record<string, RegExp> = { shipping: /Shipping policy/i, refund: /Refund policy/i, privacy: /Privacy policy/i, terms: /Terms of service/i };
@@ -95,7 +95,7 @@ test.describe('KOH whole site — 9. Content pages', () => {
         }
     });
 
-    test('Content pages have one meaningful h1 (O4)', async ({ page, merchant }) => {
+    test('Content pages have one meaningful h1 (O4)', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
         test.setTimeout(120_000);
 

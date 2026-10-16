@@ -30,7 +30,7 @@ test.describe('KOH whole site — 12. Mobile (390x844)', () => {
         }
     });
 
-    test('No horizontal overflow on key pages', async ({ page, merchant }) => {
+    test('No horizontal overflow on key pages', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const pages = [merchant.pages.homepage, merchant.products.default.path, merchant.products.secondary.path, merchant.pages.bundleBuilder,
@@ -84,7 +84,7 @@ test.describe('KOH whole site — 12. Mobile (390x844)', () => {
         await expect(page.locator('body')).not.toHaveClass(/ns-hybrid-cart-open/);
     });
 
-    test('Mobile bundle builder and FAQ', async ({ page, merchant }) => {
+    test('Mobile bundle builder and FAQ', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await load(page, merchant.pages.bundleBuilder);

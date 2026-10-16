@@ -22,7 +22,7 @@ async function expectNotFoundOrHome(page: Page, path: string) {
 }
 
 test.describe('KOH whole site — 11. 404 and unknown URLs', () => {
-    test('Unknown product handle shows not-found or redirects home', async ({ page, merchant }) => {
+    test('Unknown product handle shows not-found or redirects home', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
         await expectNotFoundOrHome(page, merchant.pages.notFoundProduct);
         await expect(page.locator('header').first()).toBeVisible();
@@ -35,12 +35,12 @@ test.describe('KOH whole site — 11. 404 and unknown URLs', () => {
         await expect(page.locator('footer').last()).toBeAttached();
     });
 
-    test('Unknown blog article and policy show not-found or redirect home', async ({ page, merchant }) => {
+    test('Unknown blog article and policy show not-found or redirect home', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
         for (const path of [`${merchant.pages.blog}/zzz-not-real`, '/policies/zzz']) await expectNotFoundOrHome(page, path);
     });
 
-    test('After an unknown URL the logo and nav still work', async ({ page, merchant }) => {
+    test('After an unknown URL the logo and nav still work', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         // Use a URL that still serves a not-found page if there is one, else the redirect target.

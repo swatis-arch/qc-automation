@@ -155,7 +155,7 @@ test.describe('KOH whole site — 4. Meal One PDP', () => {
         await emptyCart(page);
     });
 
-    test('PDP accordions open and close, reviews render', async ({ page, merchant }) => {
+    test('PDP accordions open and close, reviews render', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await openMealOne(page, merchant.products.default.path);

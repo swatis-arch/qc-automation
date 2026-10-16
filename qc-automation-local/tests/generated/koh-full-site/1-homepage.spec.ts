@@ -45,7 +45,7 @@ test.describe('KOH whole site — 1. Homepage', () => {
         await expect.poll(() => pathOf(page.url())).toBe(merchant.products.secondary.path);
     });
 
-    test('Homepage images load and every image has alt text', async ({ page, merchant }) => {
+    test('Homepage images load and every image has alt text', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await load(page, merchant.pages.homepage);
@@ -58,7 +58,7 @@ test.describe('KOH whole site — 1. Homepage', () => {
         expect(noAlt.length, 'homepage <img> without alt attribute (O10)').toBe(0);
     });
 
-    test('Homepage console has no errors from the site itself', async ({ page, merchant }) => {
+    test('Homepage console has no errors from the site itself', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         const errors = collectConsoleErrors(page);
@@ -68,7 +68,7 @@ test.describe('KOH whole site — 1. Homepage', () => {
         expect(errors.unknown(), 'new console errors (not the known third-party noise)').toEqual([]);
     });
 
-    test('Klaviyo popup can be closed without signing up', async ({ page, merchant }) => {
+    test('Klaviyo popup can be closed without signing up', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await load(page, merchant.pages.homepage);

@@ -82,7 +82,7 @@ test.describe('KOH whole site — 6. Bundle builder page', () => {
         await emptyCart(page);
     });
 
-    test('Free gift block and page sections render', async ({ page, merchant }) => {
+    test('Free gift block and page sections render', { tag: '@full' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', ONLY_KOH);
 
         await openBuilder(page, merchant.pages.bundleBuilder);
