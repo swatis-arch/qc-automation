@@ -49,4 +49,29 @@ module.exports = {
     cartItemRemove: 'button.remove-button-js',
     cartItemPrice:  '.cart-item__totals',
     cartUpsellAdd:  '.site-cart .cart-upsell-card__add',
+
+    // Core storefront (verified 2026-10-15, specs/revitin-core-storefront.md).
+    siteHeader:     'header#shopify-section-header',
+    footer:         'footer',
+    announcementLink: '.announcement a',
+    shopDropdown:   '.shop-dropdown',
+    shopDropdownMenu: '.shop-dropdown-content',
+    // Homepage product carousel (Splide, loop mode: clones are skipped).
+    homeCard:       'li.splide__slide:not(.splide__slide--clone)',
+    homeQuickAdd:   'button.sb-open-btn',
+    // The drawer root: gets class `active` when open (closed = visibility hidden).
+    cartDrawerRoot: 'div.site-cart',
+    cartBackdrop:   '.site-cart .flyout__veil',
+    cartCheckoutLink: '.site-cart a[href="/checkout"]',
+    cartLineItem:   'site-cart cart-item',
+    cartSubscribeUpgrade: '.site-cart button.subscribe_save',
+    // Full-size PDP main button (a hidden duplicate exists).
+    pdpMainAdd:     'button.main__atc__button:visible',
+    menuToggle:     '#hamburger-icon',
+    newsletterEmail: 'footer input[type="email"][name="email"]',
+    newsletterSubmit: 'footer input[type="submit"]',
+    newsletterMessages: 'footer p.success, footer p.error',
+    notFoundMessage: '.not-found-text',
+    notFoundHome:   'a.home-button',
+    contactForm:    'form[action^="/contact"]',
 };

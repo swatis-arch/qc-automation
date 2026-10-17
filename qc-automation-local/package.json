@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "playwright test",
-    "test:smoke": "node scripts/run-project.js desktop --grep \"@smoke\"",
+    "test:smoke": "node scripts/run-suite.js smoke",
     "test:regression": "node scripts/run-suite.js regression",
     "test:full": "node scripts/run-suite.js full",
     "test:module": "node scripts/run-suite.js",
@@ -18,9 +18,6 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report reports/html",
-    "test:visual": "node scripts/run-project.js desktop tests/visual.spec.js",
-    "test:visual:update": "node scripts/run-project.js desktop tests/visual.spec.js --update-snapshots",
-    "test:technical": "node scripts/run-project.js desktop tests/technical.spec.js",
     "test:codegen": "playwright codegen",
     "analyze:failures": "node ai/analyze-failure.js",
     "generate:report": "node ai/generate-report.js",

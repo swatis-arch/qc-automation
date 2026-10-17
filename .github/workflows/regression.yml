@@ -14,8 +14,6 @@ on:
           - smoke
           - regression
           - full
-          - visual
-          - technical
       merchant:
         description: 'Merchant slug (must match merchants/<slug>/config.js and be in ACTIVE_MERCHANTS)'
         required: false
@@ -48,10 +46,9 @@ jobs:
   # ── Smoke Tests ─────────────────────────────────────────────────────────────
   smoke:
     name: Smoke Tests — Desktop Chromium
-    # NOTE: there is no `pull_request:` trigger in the `on:` block above, so
-    # a `pull_request` branch here would be dead code. Add `pull_request:`
-    # to `on:` first if you want smoke tests to run automatically on PRs.
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'smoke'
+    # Runs nightly alongside regression (the critical path, so a broken checkout shows up in minutes rather than
+    # at the end of the long run) and on demand. Add `pull_request:` to `on:` to also run it on PRs.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'smoke')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -73,12 +70,13 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Run smoke tests
-        run: npx playwright test --grep @smoke --project="${MERCHANT}-desktop-chromium"
+        # @smoke tests, desktop, every active merchant (or the one given). See utils/tiers.js.
+        run: node scripts/run-suite.js smoke
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
           ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
+          MERCHANT: ${{ github.event.inputs.merchant }}
 
       - name: Upload smoke report
         uses: actions/upload-artifact@v4
@@ -90,12 +88,13 @@ jobs:
 
   # ── Full Regression ──────────────────────────────────────────────────────────
   regression:
-    name: Full Regression — Desktop + Mobile
+    name: Full Regression — Desktop (mobile suites run at 390x844 inside it)
     if: >
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.suite == 'regression' || github.event.inputs.suite == 'full'))
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # KOH alone took ~37 min on 2026-10-15; three merchants need well over an hour.
+    timeout-minutes: 240
 
     steps:
       - name: Checkout
@@ -116,8 +115,8 @@ jobs:
 
       # Tier comes from the suite input: 'full' for major releases, otherwise the
       # daily 'regression' tier (schedule has no input). See utils/tiers.js.
-      - name: Run ${{ github.event.inputs.suite == 'full' && 'full' || 'regression' }} tier (desktop + mobile)
-        run: node scripts/run-suite.js ${{ github.event.inputs.suite == 'full' && 'full' || 'regression' }} all
+      - name: Run ${{ github.event.inputs.suite == 'full' && 'full' || 'regression' }} tier
+        run: node scripts/run-suite.js ${{ github.event.inputs.suite == 'full' && 'full' || 'regression' }}
         env:
           CI:       true
           BASE_URL: ${{ secrets.BASE_URL }}
@@ -131,8 +130,9 @@ jobs:
       - name: Run Claude AI failure analysis
         run: node ai/analyze-failure.js
         env:
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          CLAUDE_MODEL:   claude-sonnet-5-5
+          CLAUDE_API_KEY:     ${{ secrets.CLAUDE_API_KEY }}
+          CLAUDE_MODEL:       claude-sonnet-5-5
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           MERCHANT:       ${{ github.event.inputs.merchant }}
         continue-on-error: true    # Non-fatal if Claude is unavailable
 
@@ -172,84 +172,5 @@ jobs:
             qc-automation-local/reports/qa-report.md
           retention-days: 30
 
-  # ── Visual Regression ────────────────────────────────────────────────────────
-  visual:
-    name: Visual Regression
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'visual'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: qc-automation-local/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install chromium --with-deps
-
-      - name: Run visual regression tests
-        run: npx playwright test tests/visual.spec.js --project="${MERCHANT}-desktop-chromium"
-        env:
-          CI:       true
-          BASE_URL: ${{ secrets.BASE_URL }}
-          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
-
-      - name: Upload visual report + screenshots
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: visual-report-${{ github.run_number }}
-          path: |
-            qc-automation-local/reports/html/
-            qc-automation-local/test-results/
-          retention-days: 30
-
-  # ── Technical Quality ────────────────────────────────────────────────────────
-  technical:
-    name: Technical Quality Checks
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'technical'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: qc-automation-local/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install chromium --with-deps
-
-      - name: Run technical quality checks
-        run: npx playwright test tests/technical.spec.js --project="${MERCHANT}-desktop-chromium"
-        env:
-          CI:       true
-          BASE_URL: ${{ secrets.BASE_URL }}
-          ORION_STOREFRONT_PASSWORD: ${{ secrets.ORION_STOREFRONT_PASSWORD }}
-          MERCHANT: ${{ github.event.inputs.merchant || 'revitin' }}
-
-      - name: Upload technical report
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: technical-report-${{ github.run_number }}
-          path: qc-automation-local/reports/html/
-          retention-days: 14
+  # Visual and technical jobs were removed on 2026-10-14 with their specs (now in
+  # qc-automation-local/tests/_archive/). Only agent-generated tests run.

@@ -50,7 +50,9 @@
 // merchants/index.js uses process.env.MERCHANT to filter active merchants.
 // Previously dotenv was loaded AFTER the merchants require, so the MERCHANT
 // env filter in .env was silently ignored. This fixes that ordering bug.
-require('dotenv').config();
+// From this file's folder, not the working directory: the Playwright Test Agents start Playwright at
+// the repo root (`-c qc-automation-local`), where there is no .env (storefront passwords went missing).
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const { defineConfig, devices } = require('@playwright/test');
 
@@ -67,7 +69,12 @@ const merchants = /** @type {MerchantConfig[]} */ (require('./merchants/index').
 // CI:     Set USE_STAGING=true in GitHub Secrets for pre-production runs
 const useStaging = process.env.USE_STAGING === 'true';
 
-const projects = merchants.flatMap(merchant => {
+// QC Console ticket checks on a store from a Jira link (merchants/adhoc/config.js): that store only.
+const runMerchants = process.env.QC_ADHOC_BASE_URL
+    ? [require('./merchants/index').loadConfig('adhoc')]
+    : merchants;
+
+const projects = runMerchants.flatMap(merchant => {
     const baseURL = useStaging
         ? merchant.urls.staging       // staging  <-- USE_STAGING=true
         : merchant.urls.production;   // production (default)
@@ -95,6 +102,8 @@ const projects = merchants.flatMap(merchant => {
 module.exports = defineConfig({
 
     testDir: './tests',
+    // Retired hand-written specs (see tests/_archive/README.md). Only agent-generated tests run.
+    testIgnore: '**/_archive/**',
 
     // -- FIX 5: Organized artifact output directory ---------------------------
     // Screenshots, videos and traces now land in test-results/artifacts/

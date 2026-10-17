@@ -33,6 +33,23 @@ module.exports = {
         cart:        '/cart',
         account:     '/a/account/login',       // Custom account app, not the default Shopify /account
         bundleBuilder: '/pages/bundle-builder', // "Bundle & Save": Protein Bar + Meal One, 2-box minimum
+        // Content pages (verified 2026-10-14). /cart redirects to /?cart=open (drawer only, no cart page).
+        about:       '/pages/about-us',
+        faq:         '/pages/faqs',
+        contact:     '/pages/contact',
+        stores:      '/pages/stores',              // "NOW AT SPROUTS" store locator
+        podcast:     '/pages/podcast',
+        blog:        '/blogs/habit-lab',
+        wholesale:   '/pages/ws-account-create',   // never submit
+        policies: {
+            shipping: '/policies/shipping-policy',
+            refund:   '/policies/refund-policy',
+            privacy:  '/policies/privacy-policy',
+            terms:    '/policies/terms-of-service',
+        },
+        // Unknown /products/* and /pages/* 301 to / (soft 404, since 2026-10-15); unknown /collections/* still 404.
+        notFoundProduct:    '/products/zzz-not-a-real-product',
+        notFoundCollection: '/collections/zzz-not-real',
     },
 
     // -- Representative products -------------------------------------------------
@@ -47,7 +64,46 @@ module.exports = {
             name:   'The Daily Bar',
             path:   '/products/daily-bar',
         },
+        // Non-builder products (Dawn PDP), verified 2026-10-14. Prices in cents.
+        apparel: {
+            handle: 'black-hoodie',
+            name:   'Black Scripted Hoodie',
+            path:   '/products/black-hoodie',
+            price:  4500,
+            sizes:  ['XS', 'S', 'M', 'L', 'XL'],
+            soldOutSize: 'XL',
+        },
+        apparelAlt: {
+            handle: 'oatmeal-hoodie',
+            name:   'Oat Scripted Hoodie',
+            path:   '/products/oatmeal-hoodie',
+            price:  4500,
+            sizes:  ['XS', 'S', 'M', 'L', 'XL'],
+            soldOutSize: 'XL',
+        },
+        simple: {
+            handle: 'beanie',
+            name:   'KOH Knit Beanie',
+            path:   '/products/beanie',
+            price:  2500,
+        },
+        sale: {
+            handle: 'koh-new-york-colorway-snapback',
+            name:   'KOH New York Colorway Snapback',
+            path:   '/products/koh-new-york-colorway-snapback',
+            price:  2250,
+            compareAt: 4500,
+        },
+        free: {
+            handle: 'glass-cup',
+            name:   'Kreatures Glass Mug',
+            path:   '/products/glass-cup',
+            price:  0,
+        },
     },
+
+    // Price-based free-shipping threshold for one-time carts (cents); the builder uses a box count instead.
+    freeShippingThreshold: 11900,
 
     // -- Steps needed before Add to Cart works ----------------------------------
     // The bundle builder keeps the button disabled ("PLEASE ADD 2 BOXES") until 2 boxes are chosen:
@@ -97,6 +153,8 @@ module.exports = {
     navLinks: [
         { label: 'Overnight Oats', href: '/products/meal-one-v2', urlPattern: /meal-one-v2/ },
         { label: 'Protein Bar',    href: '/products/daily-bar',   urlPattern: /daily-bar/ },
+        { label: 'Bundle & Save',  href: '/pages/bundle-builder', urlPattern: /bundle-builder/ },
+        { label: 'Now at Sprouts', href: '/pages/stores',         urlPattern: /pages\/stores/ },
     ],
 
     // Selectors live in merchants/koh/locators.js, loaded via the

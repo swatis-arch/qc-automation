@@ -32,12 +32,9 @@ const fs   = require('fs');
 const path = require('path');
 
 const { loadAllEvidence } = require('../utils/evidence');
+const claude              = require('./claude-client');
 
 // ── Config ────────────────────────────────────────────────────────────────────
-
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-const CLAUDE_MODEL   = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
 const RCA_DIR = path.join(process.cwd(), 'reports', 'rca');
 
@@ -87,6 +84,21 @@ identify that explicitly.
 
 Return JSON only — no markdown, no explanation outside the JSON object.`;
 
+// The fields generate-report.js, classify-severity.js and slack.js read.
+const RCA_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['status', 'severity', 'category', 'probableCause', 'confidence', 'recommendedAction'],
+    properties: {
+        status:            { type: 'string', enum: ['FAIL', 'WARN'] },
+        severity:          { type: 'string', enum: ['P0', 'P1', 'P2', 'P3'] },
+        category:          { type: 'string', enum: ['functional', 'visual', 'analytics', 'third-party integration', 'network', 'test automation issue'] },
+        probableCause:     { type: 'string' },
+        confidence:        { type: 'number' },
+        recommendedAction: { type: 'string' },
+    },
+};
+
 // ── Evidence → Prompt ─────────────────────────────────────────────────────────
 
 /**
@@ -126,42 +138,14 @@ function buildUserMessage(evidence) {
  * @returns {Promise<Object>} RCA JSON: { status, severity, category, probableCause, confidence, recommendedAction }
  */
 async function analyzeFailure(evidence) {
-    if (!CLAUDE_API_KEY || CLAUDE_API_KEY === 'your_claude_api_key_here') {
+    if (!claude.provider()) {
         console.warn('[Claude] No API key configured — returning mock RCA.');
         return getMockRCA(evidence);
     }
 
-    const userMessage = buildUserMessage(evidence);
-
-    const payload = {
-        model:      CLAUDE_MODEL,
-        max_tokens: 16000,   // thinking tokens count toward this, so leave room for the JSON
-        system:     SYSTEM_PROMPT,
-        messages: [
-            { role: 'user', content: userMessage },
-        ],
-    };
-
     try {
-        const response = await fetch(CLAUDE_API_URL, {
-            method:  'POST',
-            headers: {
-                'Content-Type':      'application/json',
-                'x-api-key':         CLAUDE_API_KEY,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Claude API error ${response.status}: ${error}`);
-        }
-
-        const data    = await response.json();
-        // Thinking is on by default on current Sonnet models, so content[0] may be a
-        // thinking block — take the text block instead.
-        const content = (data.content || []).find(b => b.type === 'text')?.text || '';
+        // Thinking tokens count toward max_tokens, so leave room for the JSON.
+        const content = await claude.callClaude({ system: SYSTEM_PROMPT, userText: buildUserMessage(evidence), schema: RCA_SCHEMA, maxTokens: 16000 });
 
         // Parse Claude's JSON response
         try {
@@ -198,9 +182,9 @@ function getMockRCA(evidence) {
         status:            'FAIL',
         severity:          'P2',
         category:          'functional',
-        probableCause:     `[MOCK] Test "${evidence.test}" failed. Real Claude analysis requires CLAUDE_API_KEY.`,
+        probableCause:     `[MOCK] Test "${evidence.test}" failed. Real Claude analysis requires CLAUDE_API_KEY or OPENROUTER_API_KEY.`,
         confidence:        0.5,
-        recommendedAction: 'Configure CLAUDE_API_KEY in .env to enable real AI analysis.',
+        recommendedAction: 'Configure CLAUDE_API_KEY or OPENROUTER_API_KEY in .env to enable real AI analysis.',
         mock:              true,
     };
 }

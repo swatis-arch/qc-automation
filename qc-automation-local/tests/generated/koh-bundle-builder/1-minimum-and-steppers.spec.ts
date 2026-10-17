@@ -77,7 +77,7 @@ test.describe('KOH bundle builder — 1. Minimum and button state, steppers', ()
         await expect(page.getByText('Your Bundle').filter({ visible: true })).toHaveCount(0);
     });
 
-    test('Two-box minimum enables the Add to Cart button', async ({ page, merchant }) => {
+    test('Two-box minimum enables the Add to Cart button', { tag: '@smoke' }, async ({ page, merchant }) => {
         test.skip(merchant.slug !== 'koh', 'KOH bundle builder only');
 
         // 1. Load /pages/bundle-builder, dismiss popups. Click 'Increase Variety Pack' once.

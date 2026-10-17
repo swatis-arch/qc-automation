@@ -138,6 +138,7 @@ cp .env.example .env     # Windows PowerShell: copy .env.example .env
 | `MERCHANT` | Restrict the run to one slug (`revitin`, `koh`, `abc`, `orion`, `laurageller`). Blank = all active merchants. |
 | `USE_STAGING` | `true` → use each merchant's `urls.staging` instead of `urls.production`. |
 | `CLAUDE_API_KEY` / `CLAUDE_MODEL` | Failure analysis. |
+| `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | Claude through OpenRouter instead (used when `CLAUDE_API_KEY` is not set; default model `anthropic/claude-sonnet-5.5`). |
 | `SLACK_WEBHOOK_URL` | Report notification. |
 | `REQUEST_PACING_MS` / `RATE_LIMIT_COOLDOWN_MS` | 429 guard: pause before each test (default 500) / extra wait after a throttled test (default 20000). `0` disables. |
 
@@ -150,19 +151,20 @@ npm run test:smoke          # @smoke-tagged tests, desktop, for $MERCHANT (defau
 npm run test:desktop        # desktop project only
 npm run test:mobile         # mobile project only
 npm run test:headed         # desktop, headed
-npm run test:visual         # visual spec, desktop
-npm run test:visual:update  # regenerate visual baselines
-npm run test:technical      # technical spec, desktop
 npm run test:ui             # Playwright UI mode
 npm run test:report         # open reports/html
 ```
 
-The `desktop` / `mobile` / `smoke` / `visual` / `technical` scripts go through
+**Only tests written by the Playwright Test Agents run** (`tests/generated/<suite>/`, since 2026-10-14). The
+hand-written specs (homepage, plp, pdp, cart, checkout, navigation, technical, visual, visual-qa) are kept, not run,
+in [`tests/_archive/`](./tests/_archive/README.md).
+
+The `desktop` / `mobile` / `smoke` scripts go through
 `scripts/run-project.js`, which builds the project name `<MERCHANT>-desktop-chromium`
 (or `-mobile-chrome`) from `MERCHANT` (default: the first entry of `ACTIVE_MERCHANTS`, currently `revitin`). To target one project directly:
 
 ```bash
-npx playwright test --project=koh-desktop-chromium tests/pdp.spec.js
+npx playwright test --project=koh-desktop-chromium tests/generated/koh-bundle-builder/
 ```
 
 ### Test tiers and modules
@@ -170,18 +172,19 @@ npx playwright test --project=koh-desktop-chromium tests/pdp.spec.js
 Full runs against a live merchant can trip Cloudflare's `429 Too Many Requests`, so the suite is
 sliced into tiers (defined in [`utils/tiers.js`](./utils/tiers.js)):
 
-| Tier | Command | What runs | Per merchant, per viewport |
-|------|---------|-----------|----------------------------|
-| Smoke | `npm run test:smoke` | `@smoke`-tagged critical checks (desktop) | 31 |
-| Regression | `npm run test:regression` | Daily: homepage, navigation, plp, pdp, cart, checkout, technical | 89 |
-| Full | `npm run test:full` | Everything: regression + visual (major releases) | 95 |
+| Tier | Command | What runs |
+|------|---------|-----------|
+| Smoke | `npm run test:smoke` | `@smoke`-tagged tests (desktop). No generated test is tagged yet, so this finds nothing |
+| Regression | `npm run test:regression` | Every generated suite |
+| Full | `npm run test:full` | Every generated suite (same as regression for now) |
 
-Each feature area is also a **module** you can run alone (smaller run, less evidence for RCA):
+Each folder in `tests/generated/` is a **module** you can run alone; a new folder is picked up automatically,
+described by its plan in `specs/<folder>.md`. The generated tests skip stores they weren't written for.
 
 ```bash
-npm run test:tiers                        # list tiers + modules
-npm run test:module -- pdp                # tests/pdp.spec.js, desktop + mobile
-npm run test:module -- plp desktop        # desktop only
+npm run test:tiers                                  # list tiers + modules
+npm run test:module -- koh-bundle-builder           # desktop + mobile
+npm run test:module -- revitin-buy-box desktop      # desktop only
 npm run test:regression -- --list         # extra args go to `playwright test`
 ```
 
@@ -221,7 +224,7 @@ npm run notify:slack        # post to Slack (add -- --dry-run to print instead)
 npm run qa:report           # all four steps in one go; extra args go to `playwright test`
 ```
 
-`npm run qa:report -- --dry-run tests/checkout.spec.js` is the quickest end-to-end check.
+`npm run qa:report -- --dry-run tests/generated/revitin-buy-box/` is the quickest end-to-end check.
 
 ### Playwright Test Agents (plan, write and fix tests with AI)
 
@@ -246,7 +249,7 @@ shortcut to it in the Startup folder (`Win+R` → `shell:startup`). ngrok's free
 "Visit Site" warning page to each new visitor.
 
 - **Commands**: `run smoke koh`, `run pdp abc mobile`, `run technical orion SITE001`, `status`, `cancel`.
-  With `CLAUDE_API_KEY` set (or, as a fallback, `GOOGLE_API_KEY` for Gemini, model `QC_GEMINI_MODEL`,
+  With `CLAUDE_API_KEY` or `OPENROUTER_API_KEY` set (or, as a fallback, `GOOGLE_API_KEY` for Gemini, model `QC_GEMINI_MODEL`,
   default gemini-3.5-flash; the free tier allows only a few requests a day), plain English works too ("check the cart on KOH phones",
   "why did the checkout tests fail?"). Without it, the keyword parser above is used.
 - **Jira**: `test KOH-68` (or the ticket link) reads the ticket, runs the matching tests, and offers a
@@ -336,10 +339,8 @@ Layering rules (locators → elements → page objects → specs) are in [CLAUDE
 |---------|-------|-------|
 | Schedule, daily 02:00 UTC | **Regression tier** (desktop + mobile) → Claude RCA → report → Slack | **All** `ACTIVE_MERCHANTS` |
 | `workflow_dispatch` `suite=regression` | Same as above | `merchant` input, or all if blank |
-| `workflow_dispatch` `suite=full` | **Full tier** (adds visual) → same AI/report/Slack steps | `merchant` input, or all if blank |
+| `workflow_dispatch` `suite=full` | **Full tier** → same AI/report/Slack steps | `merchant` input, or all if blank |
 | `workflow_dispatch` `suite=smoke` | `@smoke`, desktop | `merchant` input (default `revitin`) |
-| `workflow_dispatch` `suite=visual` | `tests/visual.spec.js`, desktop | `merchant` input (default `revitin`) |
-| `workflow_dispatch` `suite=technical` | `tests/technical.spec.js`, desktop | `merchant` input (default `revitin`) |
 
 Only the regression/full job runs the AI/report/Slack steps. There is no `pull_request` trigger.
 

@@ -32,6 +32,34 @@ module.exports = {
         search:      '/search?q=toothpaste',   // Site has no search UI — see features.search
         cart:        '/cart',
         account:     '/account',
+        accountLogin: '/account/login',
+        checkout:    '/checkout',
+        // Content pages (verified 2026-10-15, specs/revitin-core-storefront.md)
+        about:       '/pages/about',
+        ingredients: '/pages/ingredients',
+        faq:         '/pages/faqs',
+        contact:     '/pages/contact-us',
+        press:       '/pages/press',
+        reviews:     '/pages/review',
+        wholesale:   '/pages/wholesale',
+        partners:    '/pages/partner-with-us-professionally',
+        blog:        '/blogs/all',
+        // Footer links the /pages/ versions; Shopify's default /policies/* pages also exist (O12).
+        policies: {
+            shipping: '/pages/shipping-policy',
+            refund:   '/pages/return-and-refund-policy',
+            privacy:  '/pages/privacy-policy',
+            terms:    '/pages/terms-of-use',
+        },
+        shopifyPolicies: {
+            privacy:  '/policies/privacy-policy',
+            refund:   '/policies/refund-policy',
+            shipping: '/policies/shipping-policy',
+            terms:    '/policies/terms-of-service',
+        },
+        notFoundPage:       '/pages/this-page-does-not-exist-qa',
+        notFoundProduct:    '/products/this-product-does-not-exist-qa',
+        notFoundCollection: '/collections/this-collection-does-not-exist-qa',
     },
 
     // -- Representative products -------------------------------------------------
@@ -46,7 +74,15 @@ module.exports = {
             name:   'Revitin Toothpaste (3 Tubes)',
             path:   '/products/revitin-toothpaste-3-tubes-mint',
         },
+        // Flavor / size deep links used by the header, hero and homepage carousel (2026-10-15).
+        mint:         { path: '/products/revitin-natural-toothpaste/Mint' },
+        citrus:       { path: '/products/revitin-natural-toothpaste/Citrus' },
+        travelMint:   { path: '/products/revitin-natural-toothpaste/Mint?size=travel' },
+        travelCitrus: { path: '/products/revitin-natural-toothpaste/Citrus?size=travel' },
     },
+
+    // Contact details shown on the contact page (not in the footer, O10).
+    contact: { email: 'info@revitin.com', phone: '(207) 613-6825', tel: 'tel:+12076136825' },
 
     // -- Feature flags -----------------------------------------------------------
     features: {

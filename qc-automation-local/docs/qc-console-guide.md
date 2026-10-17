@@ -41,7 +41,7 @@ Team member (browser)  →  ngrok link  →  QC Console (this PC, port 4000)
 | 5 | Tested login, bad keys, unsafe filters, path tricks, cancel, and a real single-test run | — |
 | 6 | Public link: no domain was available, so ngrok's free fixed domain is used. Installed ngrok with winget and updated it to 3.39 (3.3 lacked `--url`) | `package.json` (`console:share`), `console/start-console.cmd` |
 | 7 | Slack: after each run, the console runs the same steps as `npm run qa:report`. Old evidence is moved to `reports/console/archived-evidence/` first so it doesn't leak into the new report | `console/server.js`, `notifications/slack.js` (links) |
-| 8 | PDF report: summary page, then each failure with error, AI cause and screenshot, then every test. Rendered with Playwright's Chromium | `console/pdf-report.js` |
+| 8 | Run report (HTML + PDF): verdict, results by suite, site issues in plain words with screenshots, QA checks, observations, next steps; technical detail and every test in appendices. Claude writes the wording; rendered with Playwright's Chromium | `console/run-report.js`, `console/pdf-report.js` |
 | 9 | Gemini fallback: uses the existing `GOOGLE_API_KEY` until a Claude key is added | `console/ai.js` |
 | 10 | Playwright Test Agents (planner / generator / healer) for writing new tests with AI | `.claude/agents/`, `.mcp.json`, `specs/`, `tests/seed.spec.ts` |
 
@@ -72,8 +72,25 @@ To start it automatically at Windows login, press `Win + R`, type `shell:startup
 
 1. Open the link. The first visit shows ngrok's warning page; click **Visit Site**. Then enter the access key.
 2. Type your name in **You:**, then a command.
-3. Watch the live log. When the run finishes, use **PDF report**, **Open Playwright report**, or **Ask AI why** on a failure.
+3. Watch the live log. When the run finishes, use **Report** (or **PDF**), **Open Playwright report**, or **Ask AI why** on a failure.
+   The report reads like a QA report for the merchant: a one-line verdict, results by suite, the site issues found
+   in plain words (severity, page, failing tests), each issue's screenshot, failures to check first because they may
+   be the test rather than the site, other observations and next steps; the technical detail is in an appendix.
+   Claude writes the wording from the results and screenshots (`console/run-report.js`, saved as `summary.json`);
+   Playwright decided pass/fail, and severities are proposals for QA to confirm.
+   Rebuild a run's report with `node console/pdf-report.js <runId> --rewrite`.
 4. The Slack channel gets the summary with links. Clicking them asks for the access key once.
+
+A store the suite isn't set up for can be tested without a ticket. `regression on rydertoys.com` (or just
+`rydertoys` once a ticket has run there) runs `tests/store-regression.spec.js`: about 30 checks on Shopify's standard
+pages and JSON — homepage (title, logo, header/footer links, images, server errors), search, collections (listing,
+sorting, paging), product page (title and price, images, variants, sold-out, add to cart, SEO data), cart (contents,
+quantity, remove, empty cart), checkout (opens with the product), policy/contact/404/login pages, robots.txt and
+sitemap, load time, page width and the mobile menu. Desktop and mobile take 15–20 min; add `desktop` or `mobile` for
+one. `quick check rydertoys.com` runs only five checks (home, collection, product, cart, checkout open and work).
+Jira tickets asking for a regression of such a store (e.g. "Regression testing Ryder toys") run the same suite.
+Nothing is submitted and no order is placed. With no config or verified selectors, a failure is a lead for QA to
+confirm, not a verdict: the theme may simply do something differently.
 
 Typical run times: one test < 1 min · one module 5–20 min · smoke 5–15 min · KOH desktop regression ~1.5–2 h ·
 KOH full (desktop + mobile, 582 tests) ~3.5–4 h. Runs queue one after another.
@@ -85,6 +102,7 @@ KOH full (desktop + mobile, 582 tests) ~3.5–4 h. Runs queue one after another.
 | Key in `.env` | Used for |
 |---|---|
 | `CLAUDE_API_KEY` (preferred) | Plain-English commands, answers, and real failure analysis in the PDF and Slack reports |
+| `OPENROUTER_API_KEY` | Same as `CLAUDE_API_KEY`, reaching Claude through OpenRouter (`OPENROUTER_MODEL`, default `anthropic/claude-sonnet-5.5`). Used when `CLAUDE_API_KEY` is not set |
 | `GOOGLE_API_KEY` (fallback) | Plain-English commands and answers only. The free tier allows only a few requests a day; the reports stay `[MOCK]` |
 | neither | Simple commands only (`run smoke koh`, `status`, `cancel`) |
 
@@ -96,14 +114,45 @@ The page header shows which one is active ("AI: Claude", "AI: Gemini" or "AI: ke
 
 Type `test KOH-68`, or paste the ticket link. The console then works like this:
 
-1. **Reads the ticket** (summary, description, acceptance criteria) with the account in `JIRA_EMAIL` / `JIRA_API_TOKEN`.
-2. **Picks the merchant** from the project key (`JIRA_PROJECT_MAP`, e.g. `KOH=koh`) or from the merchant you typed.
-3. **Asks the AI for the one run** that best covers the ticket, and lists what existing tests don't cover. The run
-   is validated like any other command. The ticket text is treated as data, so instructions written in a ticket
-   are ignored.
-4. **Links the run to the ticket.** When the run finishes, its detail shows **Post result to KOH-68**. Clicking it
-   (and confirming) adds a comment to the ticket with pass/fail counts, the failures, and links to the report and
-   the PDF. Nothing is posted to Jira without that click.
+1. **Reads the ticket** (summary, description, acceptance criteria, links) with the account in `JIRA_EMAIL` /
+   `JIRA_API_TOKEN`. Any project works; a bare key needs "test" (or "check", "ticket") in the message.
+2. **Works out the store**, in this order: the merchant or store you typed (`test PB-795 on koh`,
+   `test RYD-44 on rydertoys.com`); the project in `JIRA_PROJECT_MAP` (`KOH=koh,ABC=abc,REV=revitin`); the store's
+   name or domain in the ticket, or a link to it; the configured merchant the project's other tickets mostly link to
+   (ASB tickets → laurageller).
+   For a store the suite isn't set up for, it uses the project's URL in `JIRA_PROJECT_MAP`
+   (e.g. `RYD=https://rydertoys.com`), a storefront link in the ticket (Figma, Google Docs, Air, Shopify admin
+   and similar links are ignored), the store the project's last ticket ran on, or the store other tickets in the
+   project link to most (only hosts that answer as a Shopify store). Such stores have no config or locators, so
+   checks use Shopify's standard pages: `/collections/all`, the first in-stock product (or one the ticket links to),
+   `/cart/add.js`, `/cart` and `/checkout`. With no store found, the console says so and the ticket is not tested.
+3. **Turns the acceptance criteria into ticket checks** (with Claude). Each check comes from a fixed menu, on one
+   page (home, collection, product, cart, checkout):
+   - *text shown* / *text not shown*, e.g. "41% OFF" on the homepage;
+   - *discount*: a price on the page is N% below the price shown next to it (±1 point), e.g. $39.99 → $23.59;
+   - *page works*: the page opens and does its job (collection lists products, product has an add-to-cart button,
+     cart holds the product, checkout opens). Regression / whole-flow / go-live tickets get one per page.
+   Cart and checkout checks add the default product first; checkout stops on the checkout page, nothing is filled
+   in and no order is placed. Criteria these checks can't decide are listed under **Check by hand**. The checks are
+   validated before the run is queued and again by `tests/ticket-checks.spec.js`, which runs one test per check;
+   the ticket never becomes code. The ticket text is treated as data, so instructions written in a ticket are
+   ignored.
+   If nothing in the ticket can be checked this way (or the console uses Gemini), the AI picks the closest
+   existing module instead, as before.
+4. **Links the run to the ticket.** The run detail lists each check as passed/failed, with the prices it matched.
+   A failed discount check shows the price pairs it did find, e.g. `$45 → $22.5 (50%)`. When the run finishes,
+   its detail shows **Post result to KOH-68**. Clicking it (and confirming) adds a comment to the ticket with each
+   check's result, the hand checks, the failures, and links to the report and the PDF. Nothing is posted to Jira
+   without that click.
+
+**Testing all tickets.** Type `test all tickets` (or `test tickets in RYD`). The console lists the tickets in a
+testing status (Ready for Testing, Testing In Progress, Testing Failed, In QA; not "Testing - Done"), newest
+first, at most 25. Click **Test these N tickets** and each ticket is read, planned and queued in turn; runs go one
+at a time. Tickets that can't be tested (no store found, nothing on the storefront, already queued, or a long run)
+appear in Runs as **untested** with the reason.
+
+A discount check passes if *any* two prices shown together on the page differ by N%, so a matching pair in an
+upsell or a second product counts too. Read the matched prices in the run detail before signing a ticket off.
 
 **Automatic testing when a ticket reaches QA.** A Jira Automation rule calls
 `POST https://trial-bungee-baked.ngrok-free.dev/api/jira/webhook` with header `X-QC-Webhook-Secret` (the
